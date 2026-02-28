@@ -1,3 +1,5 @@
+using PourDecisions.Core.Enums;
+
 namespace PourDecisions.Core.Entities;
 
 public class CocktailIngredient

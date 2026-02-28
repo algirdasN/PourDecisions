@@ -1,4 +1,4 @@
-namespace PourDecisions.Core.Entities;
+namespace PourDecisions.Core.Enums;
 
 public enum AmountUnit
 {

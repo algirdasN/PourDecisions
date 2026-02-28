@@ -22,11 +22,14 @@
             <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
             <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
         </PackageReference>
-        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0"/>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.3"/>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.3"/>
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.3"/>
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\PourDecisions.Application\PourDecisions.Application.csproj" />
-      <ProjectReference Include="..\PourDecisions.Core\PourDecisions.Core.csproj" />
+        <ProjectReference Include="..\PourDecisions.Application\PourDecisions.Application.csproj"/>
+        <ProjectReference Include="..\PourDecisions.Core\PourDecisions.Core.csproj"/>
     </ItemGroup>
 </Project>
