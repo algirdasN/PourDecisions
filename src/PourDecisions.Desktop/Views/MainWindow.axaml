@@ -7,14 +7,28 @@
         x:Class="PourDecisions.Desktop.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
-        Title="PourDecisions.Desktop">
+        Title="{Binding Title}">
 
     <Design.DataContext>
-        <!-- This only sets the DataContext for the previewer in an IDE,
-             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
-        <vm:MainWindowViewModel/>
+        <vm:DesignMainWindowViewModel />
     </Design.DataContext>
 
-    <TextBlock Text="{Binding Greeting}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-
+    <Grid RowDefinitions="Auto,*">
+        <TextBlock Grid.Row="0"
+                   Text="{Binding Title}"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center" />
+        <Grid Grid.Row="1" ColumnDefinitions="Auto,*">
+            <ListBox Grid.Column="0"
+                     ItemsSource="{Binding NavigationItems}"
+                     SelectedItem="{Binding SelectedNavItem}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding Label}" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <ContentControl Grid.Column="1" Content="{Binding CurrentPage}" />
+        </Grid>
+    </Grid>
 </Window>

@@ -12,7 +12,7 @@ using PourDecisions.Desktop.Views;
 
 namespace PourDecisions.Desktop;
 
-public partial class App : Avalonia.Application
+public class App : Avalonia.Application
 {
     public static IServiceProvider Services { get; set; } = null!;
 
@@ -38,7 +38,7 @@ public partial class App : Avalonia.Application
             DisableAvaloniaDataAnnotationValidation();
             desktop.MainWindow = new MainWindow
             {
-                DataContext = new MainWindowViewModel()
+                DataContext = new MainWindowViewModel(Services)
             };
         }
 
@@ -52,6 +52,11 @@ public partial class App : Avalonia.Application
             options.UseSqlite($"Data Source={dbPath}"));
 
         services.AddTransient<MainWindowViewModel>();
+
+        services.AddTransient<CocktailsViewModel>();
+        services.AddTransient<EditCocktailsViewModel>();
+        services.AddTransient<MyBarViewModel>();
+        services.AddTransient<SettingsViewModel>();
     }
 
     private void DisableAvaloniaDataAnnotationValidation()
