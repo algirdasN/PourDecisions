@@ -10,8 +10,8 @@ public class CocktailIngredient
     public bool IsOptional { get; set; }
 
     public int CocktailId { get; set; }
-    public required Cocktail Cocktail { get; set; }
+    public Cocktail Cocktail { get; set; } = null!;
 
     public int TypeId { get; set; }
-    public required IngredientType Type { get; set; }
+    public IngredientType Type { get; set; } = null!;
 }

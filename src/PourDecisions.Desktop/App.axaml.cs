@@ -6,6 +6,7 @@ using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using PourDecisions.Application.AvailabilityEngine;
 using PourDecisions.Core.Data;
 using PourDecisions.Desktop.ViewModels;
 using PourDecisions.Desktop.Views;
@@ -50,6 +51,8 @@ public class App : Avalonia.Application
         var dbPath = Path.Combine(AppContext.BaseDirectory, "cocktails.db");
         services.AddDbContext<CocktailDbContext>(options =>
             options.UseSqlite($"Data Source={dbPath}"));
+
+        services.AddScoped<IAvailabilityService, AvailabilityService>();
 
         services.AddTransient<MainWindowViewModel>();
 
