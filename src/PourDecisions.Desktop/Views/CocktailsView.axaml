@@ -22,14 +22,8 @@
                     <TextBox Grid.Column="1" Text="{Binding SearchText}" />
                 </Grid>
                 <Grid Grid.Row="1" ColumnDefinitions="*,*">
-                    <Grid Grid.Column="0" ColumnDefinitions="Auto,*">
-                        <CheckBox Grid.Column="0" IsChecked="{Binding ShowAvailableOnly}" />
-                        <TextBlock Grid.Column="1" Text="Available only" VerticalAlignment="Center" />
-                    </Grid>
-                    <Grid Grid.Column="1" ColumnDefinitions="Auto,*">
-                        <CheckBox Grid.Column="0" IsChecked="{Binding ShowFavoriteOnly}" />
-                        <TextBlock Grid.Column="1" Text="Favorite only" VerticalAlignment="Center" />
-                    </Grid>
+                    <CheckBox Grid.Column="0" Content="Available only" IsChecked="{Binding ShowAvailableOnly}" />
+                    <CheckBox Grid.Column="1" Content="Favorite only" IsChecked="{Binding ShowFavoriteOnly}" />
                 </Grid>
                 <ListBox Grid.Row="2"
                          IsVisible="{Binding HasResults}"
