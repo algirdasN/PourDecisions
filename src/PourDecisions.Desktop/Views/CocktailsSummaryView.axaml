@@ -1,0 +1,40 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PourDecisions.Desktop.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="PourDecisions.Desktop.Views.CocktailsSummaryView"
+             x:DataType="vm:CocktailsSummaryViewModel">
+
+    <Grid RowDefinitions="Auto,Auto,Auto">
+        <TextBlock Grid.Row="0" Text="{Binding Name}"
+                   HorizontalAlignment="Center"
+                   Margin="10" />
+        <Grid Grid.Row="1" ColumnDefinitions="*,*">
+            <Viewbox Grid.Column="0" Stretch="Uniform">
+                <Rectangle Fill="Aquamarine" Height="100" Width="100" />
+            </Viewbox>
+            <Grid Grid.Column="1" RowDefinitions="Auto,*">
+                <Grid Grid.Row="0" ColumnDefinitions="Auto,*">
+                    <CheckBox Grid.Column="0" IsChecked="{Binding IsFavorite}" />
+                    <TextBlock Grid.Column="1" Text="Favorite" VerticalAlignment="Center" />
+                </Grid>
+                <ItemsControl Grid.Row="1" ItemsSource="{Binding Ingredients}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Classes.isMissing="{Binding IsMissing}"
+                                       Text="{Binding DisplayText}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                    <ItemsControl.Styles>
+                        <Style Selector="TextBlock.isMissing">
+                            <Setter Property="Foreground" Value="OrangeRed" />
+                        </Style>
+                    </ItemsControl.Styles>
+                </ItemsControl>
+            </Grid>
+        </Grid>
+        <TextBlock Grid.Row="2" Text="{Binding Instructions}" />
+    </Grid>
+</UserControl>

@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="PourDecisions.Desktop.App"
              xmlns:local="using:PourDecisions.Desktop"
+             xmlns:converters="using:PourDecisions.Desktop.Converters"
              xmlns:vm="using:PourDecisions.Desktop.ViewModels"
              xmlns:views="using:PourDecisions.Desktop.Views"
              RequestedThemeVariant="Default">
@@ -9,13 +10,6 @@
 
     <Application.DataTemplates>
         <local:ViewLocator />
-    </Application.DataTemplates>
-
-    <Application.Styles>
-        <FluentTheme />
-    </Application.Styles>
-
-    <Application.DataTemplates>
         <DataTemplate DataType="{x:Type vm:CocktailsViewModel}">
             <views:CocktailsView />
         </DataTemplate>
@@ -28,5 +22,16 @@
         <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
             <views:SettingsView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:CocktailsSummaryViewModel}">
+            <views:CocktailsSummaryView />
+        </DataTemplate>
     </Application.DataTemplates>
+
+    <Application.Styles>
+        <FluentTheme />
+    </Application.Styles>
+
+    <Application.Resources>
+        <converters:AvailabilityStatusToColorConverter x:Key="AvailabilityToColor" />
+    </Application.Resources>
 </Application>

@@ -10,9 +10,11 @@ public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly IServiceProvider? _services;
 
-    [ObservableProperty] private object _currentPage = null!;
+    [ObservableProperty]
+    private object _currentPage = null!;
 
-    [ObservableProperty] private NavigationItem _selectedNavItem;
+    [ObservableProperty]
+    private NavigationItem _selectedNavItem;
 
     public MainWindowViewModel(IServiceProvider? services)
     {
@@ -20,7 +22,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
         NavigationItems =
         [
-            new NavigationItem("Cocktails", typeof(CocktailsViewModel)),
+            new NavigationItem(CocktailsViewModel.ViewName, typeof(CocktailsViewModel)),
             new NavigationItem("My bar", typeof(MyBarViewModel)),
             new NavigationItem("Edit cocktails", typeof(EditCocktailsViewModel)),
             new NavigationItem("Settings", typeof(SettingsViewModel))
@@ -30,7 +32,6 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     public string Title => "Pour Decisions";
-
     public ObservableCollection<NavigationItem> NavigationItems { get; }
 
     partial void OnSelectedNavItemChanged(NavigationItem value)
@@ -41,5 +42,10 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         CurrentPage = _services.GetRequiredService(value.ViewModelType);
+
+        if (CurrentPage is IAsyncLoadable loadable)
+        {
+            _ = loadable.LoadAsync();
+        }
     }
 }

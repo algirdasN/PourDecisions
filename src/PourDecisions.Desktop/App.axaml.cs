@@ -7,6 +7,8 @@ using Avalonia.Markup.Xaml;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using PourDecisions.Application.AvailabilityEngine;
+using PourDecisions.Application.Data;
+using PourDecisions.Application.Services;
 using PourDecisions.Core.Data;
 using PourDecisions.Desktop.ViewModels;
 using PourDecisions.Desktop.Views;
@@ -32,6 +34,10 @@ public class App : Avalonia.Application
         var db = scope.ServiceProvider.GetRequiredService<CocktailDbContext>();
         db.Database.Migrate();
 
+#if DEBUG
+        DevSeeder.Seed(db);
+#endif
+
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             // Avoid duplicate validations from both Avalonia and the CommunityToolkit. 
@@ -53,6 +59,7 @@ public class App : Avalonia.Application
             options.UseSqlite($"Data Source={dbPath}"));
 
         services.AddScoped<IAvailabilityService, AvailabilityService>();
+        services.AddScoped<ICocktailService, CocktailService>();
 
         services.AddTransient<MainWindowViewModel>();
 

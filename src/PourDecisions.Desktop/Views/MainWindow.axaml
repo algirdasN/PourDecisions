@@ -13,22 +13,25 @@
         <vm:DesignMainWindowViewModel />
     </Design.DataContext>
 
-    <Grid RowDefinitions="Auto,*">
-        <TextBlock Grid.Row="0"
-                   Text="{Binding Title}"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center" />
-        <Grid Grid.Row="1" ColumnDefinitions="Auto,*">
-            <ListBox Grid.Column="0"
+    <Grid ColumnDefinitions="Auto,*">
+        <Grid Grid.Column="0" RowDefinitions="Auto,Auto,*">
+            <TextBlock Grid.Row="0"
+                       Text="{Binding Title}"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       Margin="10"
+                       FontWeight="Bold" />
+            <Separator Grid.Row="1" Margin="5" />
+            <ListBox Grid.Row="2"
                      ItemsSource="{Binding NavigationItems}"
                      SelectedItem="{Binding SelectedNavItem}">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <TextBlock Text="{Binding Label}" />
+                        <TextBlock Text="{Binding Label}" Margin="10,0" />
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
-            <ContentControl Grid.Column="1" Content="{Binding CurrentPage}" />
         </Grid>
+        <ContentControl Grid.Column="1" Content="{Binding CurrentPage}" />
     </Grid>
 </Window>
