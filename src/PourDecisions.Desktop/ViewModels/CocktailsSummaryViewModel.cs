@@ -29,7 +29,7 @@ public partial class CocktailsSummaryViewModel(Cocktail cocktail, AvailabilityRe
     public string AvailabilityLabel { get; } = availabilityResult.Status switch
     {
         AvailabilityStatus.Available => "✔️ available",
-        AvailabilityStatus.Unavailable => $"❌ missing {availabilityResult.MissingRequiredCount}",
+        AvailabilityStatus.Unavailable => $"❌ missing {availabilityResult.MissingRequired.Count}",
         _ => throw new ArgumentOutOfRangeException()
     };
 
