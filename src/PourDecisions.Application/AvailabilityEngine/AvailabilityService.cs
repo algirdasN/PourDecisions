@@ -13,7 +13,7 @@ public class AvailabilityService(CocktailDbContext cocktailDbContext) : IAvailab
     public async Task<Dictionary<int, AvailabilityResult>> GetCocktailAvailabilityAsync()
     {
         var availableTypeIds = cocktailDbContext.IngredientTypes
-            .Where(type => !type.IsTracked || type.Ingredients.Any(ingredient => ingredient.Bottles.Count > 0))
+            .Where(type => !type.IsTracked || type.Bottles.Count > 0)
             .Select(type => type.Id)
             .ToHashSet();
 

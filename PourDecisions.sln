@@ -8,6 +8,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PourDecisions.Desktop", "sr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PourDecisions.UnitTests", "tests\PourDecisions.UnitTests\PourDecisions.UnitTests.csproj", "{A6AEFF9F-2435-412D-A17C-6B6BEF121A2C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PourDecisions.Shared", "src\PourDecisions.Shared\PourDecisions.Shared.csproj", "{274853D5-9EB9-4090-B84A-6409A095D726}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,6 +32,10 @@ Global
 		{A6AEFF9F-2435-412D-A17C-6B6BEF121A2C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A6AEFF9F-2435-412D-A17C-6B6BEF121A2C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A6AEFF9F-2435-412D-A17C-6B6BEF121A2C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{274853D5-9EB9-4090-B84A-6409A095D726}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{274853D5-9EB9-4090-B84A-6409A095D726}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{274853D5-9EB9-4090-B84A-6409A095D726}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{274853D5-9EB9-4090-B84A-6409A095D726}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 	EndGlobalSection

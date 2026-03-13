@@ -1,0 +1,54 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:PourDecisions.Desktop.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="PourDecisions.Desktop.Views.AddBottleView"
+             x:DataType="vm:AddBottleViewModel">
+
+    <Grid RowDefinitions="Auto,Auto,Auto">
+        <TextBlock Grid.Row="0"
+                   Text="Add new bottle"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   Margin="10"
+                   FontWeight="Bold" />
+        <Grid Grid.Row="1" ColumnDefinitions="*,*,*,*" RowDefinitions="Auto,Auto,Auto,Auto">
+            <TextBlock Grid.Column="0" Grid.Row="0" Text="Ingredient type: "
+                       HorizontalAlignment="Right"
+                       VerticalAlignment="Center" />
+            <AutoCompleteBox Grid.Column="1" Grid.Row="0" Grid.ColumnSpan="3"
+                             ItemsSource="{Binding IngredientTypeNames}"
+                             Text="{Binding IngredientTypeName, Mode=TwoWay}"
+                             FilterMode="ContainsOrdinal"
+                             MinimumPrefixLength="0"
+                             HorizontalAlignment="Stretch" />
+            <TextBlock Grid.Column="0" Grid.Row="1" Text="Bottle name: "
+                       HorizontalAlignment="Right"
+                       VerticalAlignment="Center" />
+            <TextBox Grid.Column="1" Grid.Row="1" Grid.ColumnSpan="3"
+                     Text="{Binding BottleName}" />
+            <TextBlock Grid.Column="0" Grid.Row="2" Text="Volume: "
+                       HorizontalAlignment="Right"
+                       VerticalAlignment="Center" />
+            <Grid Grid.Column="1" Grid.Row="2" ColumnDefinitions="*,Auto">
+                <TextBox Grid.Column="0" Text="{Binding VolumeText}" TextAlignment="Right" />
+                <TextBlock Grid.Column="1" Text=" ml" VerticalAlignment="Center" />
+            </Grid>
+            <TextBlock Grid.Column="2" Grid.Row="2" Text="Fill level: "
+                       HorizontalAlignment="Right"
+                       VerticalAlignment="Center" />
+            <ComboBox Grid.Column="3" Grid.Row="2" ItemsSource="{Binding FillLevels}"
+                      SelectedItem="{Binding FillLevel}"
+                      HorizontalAlignment="Stretch" />
+            <Button Grid.Column="1" Grid.Row="3" Content="Add"
+                    Command="{Binding AddBottleCommand}"
+                    IsDefault="True"
+                    HorizontalAlignment="Center" />
+            <Button Grid.Column="2" Grid.Row="3" Content="Cancel"
+                    Command="{Binding CancelCommand}"
+                    HorizontalAlignment="Center" />
+        </Grid>
+    </Grid>
+</UserControl>

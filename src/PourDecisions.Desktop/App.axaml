@@ -5,6 +5,7 @@
              xmlns:converters="using:PourDecisions.Desktop.Converters"
              xmlns:vm="using:PourDecisions.Desktop.ViewModels"
              xmlns:views="using:PourDecisions.Desktop.Views"
+             xmlns:styling="clr-namespace:FluentAvalonia.Styling;assembly=FluentAvalonia"
              RequestedThemeVariant="Default">
     <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 
@@ -13,22 +14,25 @@
         <DataTemplate DataType="{x:Type vm:CocktailsViewModel}">
             <views:CocktailsView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:CocktailSummaryViewModel}">
+            <views:CocktailSummaryView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:InventoryViewModel}">
+            <views:InventoryView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:AddBottleViewModel}">
+            <views:AddBottleView />
+        </DataTemplate>
         <DataTemplate DataType="{x:Type vm:EditCocktailsViewModel}">
             <views:EditCocktailsView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:MyBarViewModel}">
-            <views:MyBarView />
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
             <views:SettingsView />
         </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:CocktailsSummaryViewModel}">
-            <views:CocktailsSummaryView />
-        </DataTemplate>
     </Application.DataTemplates>
 
     <Application.Styles>
-        <FluentTheme />
+        <styling:FluentAvaloniaTheme />
     </Application.Styles>
 
     <Application.Resources>

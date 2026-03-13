@@ -4,9 +4,9 @@ using Avalonia.Markup.Xaml;
 
 namespace PourDecisions.Desktop.Views;
 
-public partial class MyBarView : UserControl
+public partial class AddBottleView : UserControl
 {
-    public MyBarView()
+    public AddBottleView()
     {
         InitializeComponent();
     }

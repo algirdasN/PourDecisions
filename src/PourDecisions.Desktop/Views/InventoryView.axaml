@@ -1,0 +1,107 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PourDecisions.Desktop.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="PourDecisions.Desktop.Views.InventoryView"
+             x:DataType="vm:InventoryViewModel">
+
+    <Grid ColumnDefinitions="*,*,*,*">
+        <ScrollViewer Grid.Column="{Binding ListColumn}" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto">
+            <Grid RowDefinitions="Auto,Auto">
+                <Border Grid.Row="0" Background="{DynamicResource ExpanderHeaderBackground}"
+                        BorderBrush="{DynamicResource ExpanderHeaderBorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="{DynamicResource ControlCornerRadius}"
+                        MinHeight="48"
+                        Padding="16,0"
+                        IsVisible="{Binding IsEmpty}">
+                    <TextBlock Text="Your bar is empty. Click the ✚ button to add your first bottle."
+                               FontWeight="Bold"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center" />
+                </Border>
+                <ItemsControl Grid.Row="0" ItemsSource="{Binding IngredientTypes}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Expander IsExpanded="{Binding IsExpanded}" HorizontalAlignment="Stretch">
+                                <Expander.Header>
+                                    <Grid ColumnDefinitions="Auto,*">
+                                        <Button Grid.Column="0" Content="➕" Command="{Binding AddFormCommand}" />
+                                        <TextBlock Grid.Column="1" Text="{Binding DisplayName}"
+                                                   FontWeight="Bold"
+                                                   Margin="10,0"
+                                                   VerticalAlignment="Center" />
+                                    </Grid>
+                                </Expander.Header>
+                                <Grid RowDefinitions="Auto,*" Grid.IsSharedSizeScope="True">
+                                    <Grid Grid.Row="0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition />
+                                            <ColumnDefinition SharedSizeGroup="Volume" Width="Auto" />
+                                            <ColumnDefinition SharedSizeGroup="Fill" Width="Auto" />
+                                            <ColumnDefinition SharedSizeGroup="Delete" Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Name" HorizontalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="Volume" HorizontalAlignment="Center" />
+                                        <TextBlock Grid.Column="2" Text="Fill level" HorizontalAlignment="Center" />
+                                        <TextBlock Grid.Column="3" Text="Delete" HorizontalAlignment="Center" />
+                                    </Grid>
+                                    <ItemsControl Grid.Row="1" ItemsSource="{Binding Bottles}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition />
+                                                        <ColumnDefinition SharedSizeGroup="Volume" Width="Auto" />
+                                                        <ColumnDefinition SharedSizeGroup="Fill" Width="Auto" />
+                                                        <ColumnDefinition SharedSizeGroup="Delete" Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0" Text="{Binding Name}"
+                                                               VerticalAlignment="Center" />
+                                                    <TextBlock Grid.Column="1"
+                                                               Text="{Binding Volume}"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center" />
+                                                    <Button Grid.Column="2"
+                                                            Content="{Binding FillDisplay}"
+                                                            Command="{Binding CycleFillLevelCommand}"
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center" />
+                                                    <HyperlinkButton Grid.Column="3"
+                                                                     Content="Delete"
+                                                                     Command="{Binding DeleteBottleCommand}"
+                                                                     HorizontalAlignment="Center"
+                                                                     VerticalAlignment="Center" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
+                            </Expander>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Grid Grid.Row="1">
+                    <Border Background="{DynamicResource ExpanderHeaderBackground}"
+                            BorderBrush="{DynamicResource ExpanderHeaderBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="{DynamicResource ControlCornerRadius}"
+                            MinHeight="48"
+                            Padding="16,0">
+                        <Grid ColumnDefinitions="Auto,*">
+                            <Button Grid.Column="0" Content="➕" Command="{Binding AddFormCommand}" />
+                            <TextBlock Grid.Column="1" Text="&lt;New Type&gt;"
+                                       FontWeight="Bold"
+                                       Margin="10,0"
+                                       VerticalAlignment="Center" />
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Grid>
+        </ScrollViewer>
+        <ContentControl Grid.Column="2" Grid.ColumnSpan="2" Content="{Binding AddBottleForm}"
+                        IsVisible="{Binding IsAddingBottle}" />
+    </Grid>
+</UserControl>

@@ -2,9 +2,7 @@ namespace PourDecisions.Core.Enums;
 
 public enum FillLevel
 {
-    Full,
-    ThreeQuarters,
-    Half,
-    Quarter,
-    AlmostEmpty
+    Full = 0,
+    Half = 1,
+    Quarter = 2,
 }

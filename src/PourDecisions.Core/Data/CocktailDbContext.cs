@@ -6,7 +6,6 @@ namespace PourDecisions.Core.Data;
 public class CocktailDbContext(DbContextOptions<CocktailDbContext> options) : DbContext(options)
 {
     public DbSet<IngredientType> IngredientTypes => Set<IngredientType>();
-    public DbSet<Ingredient> Ingredients => Set<Ingredient>();
     public DbSet<Bottle> Bottles => Set<Bottle>();
     public DbSet<Cocktail> Cocktails => Set<Cocktail>();
     public DbSet<CocktailIngredient> CocktailIngredients => Set<CocktailIngredient>();

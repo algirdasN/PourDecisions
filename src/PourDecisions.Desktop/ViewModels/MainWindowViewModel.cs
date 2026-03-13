@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.DependencyInjection;
 using PourDecisions.Desktop.Models;
@@ -22,8 +21,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
         NavigationItems =
         [
-            new NavigationItem(CocktailsViewModel.ViewName, typeof(CocktailsViewModel)),
-            new NavigationItem("My bar", typeof(MyBarViewModel)),
+            new NavigationItem("Cocktails", typeof(CocktailsViewModel)),
+            new NavigationItem("My bar", typeof(InventoryViewModel)),
             new NavigationItem("Edit cocktails", typeof(EditCocktailsViewModel)),
             new NavigationItem("Settings", typeof(SettingsViewModel))
         ];

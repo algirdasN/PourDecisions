@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using PourDecisions.Application.AvailabilityEngine;
 using PourDecisions.Core.Entities;
@@ -8,7 +5,7 @@ using PourDecisions.Desktop.Models;
 
 namespace PourDecisions.Desktop.ViewModels;
 
-public partial class CocktailsSummaryViewModel(Cocktail cocktail, AvailabilityResult availabilityResult) : ViewModelBase
+public partial class CocktailSummaryViewModel(Cocktail cocktail, AvailabilityResult availabilityResult) : ViewModelBase
 {
     private readonly int _id = cocktail.Id;
 

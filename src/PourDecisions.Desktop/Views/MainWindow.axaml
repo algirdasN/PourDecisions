@@ -32,6 +32,15 @@
                 </ListBox.ItemTemplate>
             </ListBox>
         </Grid>
-        <ContentControl Grid.Column="1" Content="{Binding CurrentPage}" />
+        <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*">
+            <TextBlock Grid.Row="0"
+                       Text="{Binding SelectedNavItem.Label}"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       FontWeight="Bold"
+                       Margin="10" />
+            <Separator Grid.Row="1" Margin="5" />
+            <ContentControl Grid.Row="2" Content="{Binding CurrentPage}" />
+        </Grid>
     </Grid>
 </Window>

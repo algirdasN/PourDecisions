@@ -25,18 +25,13 @@ public class AvailabilityServiceTests
         var ginType = new IngredientType { Id = 1, Name = "Gin", IsTracked = true };
         var vermouthType = new IngredientType { Id = 2, Name = "Vermouth", IsTracked = true };
 
-        var gin = new Ingredient { Id = 1, Name = "Tanqueray", TypeId = 1, Type = ginType };
-        var vermouth = new Ingredient { Id = 2, Name = "Noilly Prat", TypeId = 2, Type = vermouthType };
-
-        var ginBottle = new Bottle { Id = 1, FillLevel = FillLevel.Half, IngredientId = 1, Ingredient = gin };
+        var ginBottle = new Bottle
+            { Id = 1, FillLevel = FillLevel.Half, Name = "Tanqueray", TypeId = 1, Type = ginType };
         var vermouthBottle = new Bottle
-            { Id = 2, FillLevel = FillLevel.Quarter, IngredientId = 2, Ingredient = vermouth };
+            { Id = 2, FillLevel = FillLevel.Quarter, Name = "Noilly Prat", TypeId = 2, Type = vermouthType };
 
-        gin.Bottles = new List<Bottle> { ginBottle };
-        vermouth.Bottles = new List<Bottle> { vermouthBottle };
-
-        ginType.Ingredients = new List<Ingredient> { gin };
-        vermouthType.Ingredients = new List<Ingredient> { vermouth };
+        ginType.Bottles = new List<Bottle> { ginBottle };
+        vermouthType.Bottles = new List<Bottle> { vermouthBottle };
 
         var cocktail = new Cocktail
         {
@@ -60,7 +55,7 @@ public class AvailabilityServiceTests
 
         await using (var context = new CocktailDbContext(options))
         {
-            await context.AddRangeAsync(ginType, vermouthType, gin, vermouth, ginBottle, vermouthBottle, cocktail);
+            await context.AddRangeAsync(ginType, vermouthType, ginBottle, vermouthBottle, cocktail);
             await context.SaveChangesAsync();
         }
 
@@ -87,9 +82,8 @@ public class AvailabilityServiceTests
         var ginType = new IngredientType { Id = 1, Name = "Gin", IsTracked = true };
         var garnishType = new IngredientType { Id = 2, Name = "Lemon", IsTracked = false };
 
-        var gin = new Ingredient { Id = 1, Name = "Tanqueray", TypeId = 1, Type = ginType };
-        var bottle = new Bottle { Id = 1, FillLevel = FillLevel.Half, IngredientId = 1, Ingredient = gin };
-        gin.Bottles = new List<Bottle> { bottle };
+        var bottle = new Bottle { Id = 1, FillLevel = FillLevel.Half, Name = "Tanqueray", TypeId = 1, Type = ginType };
+        ginType.Bottles = new List<Bottle> { bottle };
 
         var cocktail = new Cocktail
         {
@@ -113,7 +107,7 @@ public class AvailabilityServiceTests
 
         await using (var context = new CocktailDbContext(options))
         {
-            await context.AddRangeAsync(ginType, garnishType, gin, bottle, cocktail);
+            await context.AddRangeAsync(ginType, garnishType, bottle, cocktail);
             await context.SaveChangesAsync();
         }
 
@@ -191,9 +185,8 @@ public class AvailabilityServiceTests
         var ginType = new IngredientType { Id = 1, Name = "Gin", IsTracked = true };
         var bitterType = new IngredientType { Id = 2, Name = "Bitters", IsTracked = true };
 
-        var gin = new Ingredient { Id = 1, Name = "Tanqueray", TypeId = 1, Type = ginType };
-        var bottle = new Bottle { Id = 1, FillLevel = FillLevel.Half, IngredientId = 1, Ingredient = gin };
-        gin.Bottles = new List<Bottle> { bottle };
+        var bottle = new Bottle { Id = 1, FillLevel = FillLevel.Half, Name = "Tanqueray", TypeId = 1, Type = ginType };
+        ginType.Bottles = new List<Bottle> { bottle };
 
         var cocktail = new Cocktail
         {
@@ -217,7 +210,7 @@ public class AvailabilityServiceTests
 
         await using (var context = new CocktailDbContext(options))
         {
-            await context.AddRangeAsync(ginType, bitterType, gin, bottle, cocktail);
+            await context.AddRangeAsync(ginType, bitterType, bottle, cocktail);
             await context.SaveChangesAsync();
         }
 
@@ -246,9 +239,8 @@ public class AvailabilityServiceTests
         var ginType = new IngredientType { Id = 1, Name = "Gin", IsTracked = true };
         var rumType = new IngredientType { Id = 2, Name = "Rum", IsTracked = true };
 
-        var gin = new Ingredient { Id = 1, Name = "Tanqueray", TypeId = 1, Type = ginType };
-        var bottle = new Bottle { Id = 1, FillLevel = FillLevel.Half, IngredientId = 1, Ingredient = gin };
-        gin.Bottles = new List<Bottle> { bottle };
+        var bottle = new Bottle { Id = 1, FillLevel = FillLevel.Half, Name = "Tanqueray", TypeId = 1, Type = ginType };
+        ginType.Bottles = new List<Bottle> { bottle };
 
         var martini = new Cocktail
         {
@@ -282,7 +274,7 @@ public class AvailabilityServiceTests
 
         await using (var context = new CocktailDbContext(options))
         {
-            await context.AddRangeAsync(ginType, rumType, gin, bottle, martini, daiquiri);
+            await context.AddRangeAsync(ginType, rumType, bottle, martini, daiquiri);
             await context.SaveChangesAsync();
         }
 

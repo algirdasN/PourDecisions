@@ -3,9 +3,16 @@
         <OutputType>WinExe</OutputType>
         <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\PourDecisions.Application\PourDecisions.Application.csproj"/>
+        <ProjectReference Include="..\PourDecisions.Core\PourDecisions.Core.csproj"/>
+        <ProjectReference Include="..\PourDecisions.Shared\PourDecisions.Shared.csproj"/>
+    </ItemGroup>
 
     <ItemGroup>
         <AvaloniaResource Include="Assets\**"/>
@@ -22,13 +29,9 @@
             <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
         </PackageReference>
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0"/>
+        <PackageReference Include="FluentAvaloniaUI" Version="2.5.0"/>
         <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.3"/>
         <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.3"/>
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.3"/>
-    </ItemGroup>
-
-    <ItemGroup>
-        <ProjectReference Include="..\PourDecisions.Application\PourDecisions.Application.csproj"/>
-        <ProjectReference Include="..\PourDecisions.Core\PourDecisions.Core.csproj"/>
     </ItemGroup>
 </Project>

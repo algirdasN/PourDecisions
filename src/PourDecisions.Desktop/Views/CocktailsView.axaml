@@ -7,55 +7,46 @@
              x:Class="PourDecisions.Desktop.Views.CocktailsView"
              x:DataType="vm:CocktailsViewModel">
 
-    <Grid RowDefinitions="Auto,Auto,*">
-        <TextBlock Grid.Row="0"
-                   Text="{Binding Title}"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center"
-                   FontWeight="Bold"
-                   Margin="10" />
-        <Separator Grid.Row="1" Margin="5" />
-        <Grid Grid.Row="2" ColumnDefinitions="1*, Auto, 2*">
-            <Grid Grid.Column="0" RowDefinitions="Auto,Auto,*">
-                <Grid Grid.Row="0" ColumnDefinitions="Auto,*">
-                    <TextBlock Grid.Column="0" Text="Search by name: " VerticalAlignment="Center" />
-                    <TextBox Grid.Column="1" Text="{Binding SearchText}" />
-                </Grid>
-                <Grid Grid.Row="1" ColumnDefinitions="*,*">
-                    <CheckBox Grid.Column="0" Content="Available only" IsChecked="{Binding ShowAvailableOnly}" />
-                    <CheckBox Grid.Column="1" Content="Favorite only" IsChecked="{Binding ShowFavoriteOnly}" />
-                </Grid>
-                <ListBox Grid.Row="2"
-                         IsVisible="{Binding HasResults}"
-                         ItemsSource="{Binding FilteredCocktails}"
-                         SelectedItem="{Binding SelectedCocktail}">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <Grid ColumnDefinitions="Auto,*,Auto">
-                                <TextBlock Grid.Column="0" Text="{Binding FavoriteLabel}" />
-                                <TextBlock Grid.Column="1" Text="{Binding Name}" />
-                                <TextBlock Grid.Column="2" Text="{Binding AvailabilityLabel}"
-                                           Foreground="{Binding AvailabilityStatus, Converter={StaticResource AvailabilityToColor}}"
-                                           HorizontalAlignment="Right" />
-                            </Grid>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-                <Grid Grid.Row="2" RowDefinitions="Auto,Auto">
-                    <TextBlock Grid.Row="0"
-                               Text="{Binding EmptyStateMessage}"
-                               IsVisible="{Binding !HasResults}"
-                               HorizontalAlignment="Center" />
-                    <HyperlinkButton Grid.Row="1"
-                                     IsVisible="{Binding ShowClearButton}"
-                                     HorizontalAlignment="Center"
-                                     Command="{Binding ClearFiltersCommand}">
-                        Clear filters
-                    </HyperlinkButton>
-                </Grid>
+    <Grid ColumnDefinitions="1*, Auto, 2*">
+        <Grid Grid.Column="0" RowDefinitions="Auto,Auto,*">
+            <Grid Grid.Row="0" ColumnDefinitions="Auto,*">
+                <TextBlock Grid.Column="0" Text="Search by name: " VerticalAlignment="Center" />
+                <TextBox Grid.Column="1" Text="{Binding SearchText}" />
             </Grid>
-            <GridSplitter Grid.Column="1" />
-            <ContentControl Grid.Column="2" Content="{Binding SelectedCocktail}" />
+            <Grid Grid.Row="1" ColumnDefinitions="*,*">
+                <CheckBox Grid.Column="0" Content="Available only" IsChecked="{Binding ShowAvailableOnly}" />
+                <CheckBox Grid.Column="1" Content="Favorite only" IsChecked="{Binding ShowFavoriteOnly}" />
+            </Grid>
+            <ListBox Grid.Row="2"
+                     IsVisible="{Binding HasResults}"
+                     ItemsSource="{Binding FilteredCocktails}"
+                     SelectedItem="{Binding SelectedCocktail}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <TextBlock Grid.Column="0" Text="{Binding FavoriteLabel}" />
+                            <TextBlock Grid.Column="1" Text="{Binding Name}" />
+                            <TextBlock Grid.Column="2" Text="{Binding AvailabilityLabel}"
+                                       Foreground="{Binding AvailabilityStatus, Converter={StaticResource AvailabilityToColor}}"
+                                       HorizontalAlignment="Right" />
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <Grid Grid.Row="2" RowDefinitions="Auto,Auto">
+                <TextBlock Grid.Row="0"
+                           Text="{Binding EmptyStateMessage}"
+                           IsVisible="{Binding !HasResults}"
+                           HorizontalAlignment="Center" />
+                <HyperlinkButton Grid.Row="1"
+                                 IsVisible="{Binding ShowClearButton}"
+                                 HorizontalAlignment="Center"
+                                 Command="{Binding ClearFiltersCommand}">
+                    Clear filters
+                </HyperlinkButton>
+            </Grid>
         </Grid>
+        <GridSplitter Grid.Column="1" />
+        <ContentControl Grid.Column="2" Content="{Binding SelectedCocktail}" />
     </Grid>
 </UserControl>

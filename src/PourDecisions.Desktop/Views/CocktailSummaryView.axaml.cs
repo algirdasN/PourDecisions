@@ -4,9 +4,9 @@ using Avalonia.Markup.Xaml;
 
 namespace PourDecisions.Desktop.Views;
 
-public partial class CocktailsSummaryView : UserControl
+public partial class CocktailSummaryView : UserControl
 {
-    public CocktailsSummaryView()
+    public CocktailSummaryView()
     {
         InitializeComponent();
     }

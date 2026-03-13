@@ -1,8 +1,4 @@
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
-using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PourDecisions.Application.AvailabilityEngine;
@@ -13,20 +9,18 @@ namespace PourDecisions.Desktop.ViewModels;
 public partial class CocktailsViewModel(ICocktailService cocktailService, IAvailabilityService availabilityService)
     : ViewModelBase, IAsyncLoadable
 {
-    public const string ViewName = "Cocktails";
-
-    private readonly List<CocktailsSummaryViewModel> _allCocktails = [];
+    private List<CocktailSummaryViewModel> _allCocktails = [];
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasResults))]
     [NotifyPropertyChangedFor(nameof(ShowClearButton))]
-    private ObservableCollection<CocktailsSummaryViewModel> _filteredCocktails = [];
+    private ObservableCollection<CocktailSummaryViewModel> _filteredCocktails = [];
 
     [ObservableProperty]
     private string _searchText = string.Empty;
 
     [ObservableProperty]
-    private CocktailsSummaryViewModel? _selectedCocktail;
+    private CocktailSummaryViewModel? _selectedCocktail;
 
     [ObservableProperty]
     private bool _showAvailableOnly;
@@ -34,7 +28,6 @@ public partial class CocktailsViewModel(ICocktailService cocktailService, IAvail
     [ObservableProperty]
     private bool _showFavoriteOnly;
 
-    public string Title => ViewName;
     public bool HasResults => FilteredCocktails.Count > 0;
     public bool ShowClearButton => _allCocktails.Count > 0 && FilteredCocktails.Count == 0;
 
@@ -47,27 +40,32 @@ public partial class CocktailsViewModel(ICocktailService cocktailService, IAvail
         var cocktailTask = cocktailService.GetAllWithIngredientsAsync();
         var availabilityTask = availabilityService.GetCocktailAvailabilityAsync();
 
-        _allCocktails.Clear();
+        foreach (var vm in _allCocktails)
+        {
+            vm.FavoriteToggled -= OnFavoriteToggled;
+        }
 
         await Task.WhenAll(cocktailTask, availabilityTask);
 
         var cocktails = cocktailTask.Result;
         var cocktailAvailability = availabilityTask.Result;
 
-        foreach (var cocktail in cocktails)
-        {
-            var vm = new CocktailsSummaryViewModel(cocktail, cocktailAvailability[cocktail.Id]);
-            vm.FavoriteToggled += OnFavoriteToggled;
-            _allCocktails.Add(vm);
-        }
+        _allCocktails = cocktails
+            .Select(cocktail =>
+            {
+                var vm = new CocktailSummaryViewModel(cocktail, cocktailAvailability[cocktail.Id]);
+                vm.FavoriteToggled += OnFavoriteToggled;
+                return vm;
+            })
+            .ToList();
 
-        FilteredCocktails = new ObservableCollection<CocktailsSummaryViewModel>(_allCocktails);
+        FilteredCocktails = new ObservableCollection<CocktailSummaryViewModel>(_allCocktails);
 
         SelectedCocktail = FilteredCocktails.FirstOrDefault();
     }
 
     [RelayCommand]
-    public void ClearFiltersCommand()
+    private void ClearFilters()
     {
         SearchText = string.Empty;
         ShowAvailableOnly = false;
@@ -103,7 +101,7 @@ public partial class CocktailsViewModel(ICocktailService cocktailService, IAvail
             (string.IsNullOrWhiteSpace(SearchText) ||
              vm.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase)));
 
-        FilteredCocktails = new ObservableCollection<CocktailsSummaryViewModel>(filtered);
+        FilteredCocktails = new ObservableCollection<CocktailSummaryViewModel>(filtered);
 
         if (SelectedCocktail == null || !FilteredCocktails.Contains(SelectedCocktail))
         {

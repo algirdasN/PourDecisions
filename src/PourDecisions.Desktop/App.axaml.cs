@@ -1,6 +1,3 @@
-using System;
-using System.IO;
-using System.Linq;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
@@ -10,6 +7,7 @@ using PourDecisions.Application.AvailabilityEngine;
 using PourDecisions.Application.Data;
 using PourDecisions.Application.Services;
 using PourDecisions.Core.Data;
+using PourDecisions.Desktop.Services;
 using PourDecisions.Desktop.ViewModels;
 using PourDecisions.Desktop.Views;
 
@@ -59,13 +57,15 @@ public class App : Avalonia.Application
             options.UseSqlite($"Data Source={dbPath}"));
 
         services.AddScoped<IAvailabilityService, AvailabilityService>();
+        services.AddScoped<IBottleService, BottleService>();
         services.AddScoped<ICocktailService, CocktailService>();
+        services.AddScoped<IDialogService, DialogService>();
 
         services.AddTransient<MainWindowViewModel>();
 
         services.AddTransient<CocktailsViewModel>();
         services.AddTransient<EditCocktailsViewModel>();
-        services.AddTransient<MyBarViewModel>();
+        services.AddTransient<InventoryViewModel>();
         services.AddTransient<SettingsViewModel>();
     }
 
