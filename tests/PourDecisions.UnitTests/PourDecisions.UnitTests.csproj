@@ -23,6 +23,7 @@
     <ItemGroup>
         <ProjectReference Include="..\..\src\PourDecisions.Application\PourDecisions.Application.csproj"/>
         <ProjectReference Include="..\..\src\PourDecisions.Core\PourDecisions.Core.csproj"/>
+        <ProjectReference Include="..\..\src\PourDecisions.Shared\PourDecisions.Shared.csproj" />
     </ItemGroup>
 
 </Project>
