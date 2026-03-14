@@ -106,9 +106,14 @@ public class BottleService(CocktailDbContext cocktailDbContext) : IBottleService
     /// <inheritdoc/>
     public async Task DeleteBottleAsync(int bottleId)
     {
-        await cocktailDbContext.Bottles
-            .Where(bottles => bottles.Id == bottleId)
-            .ExecuteDeleteAsync();
+        var bottle = await cocktailDbContext.Bottles
+            .FirstOrDefaultAsync(b => b.Id == bottleId);
+
+        if (bottle != null)
+        {
+            cocktailDbContext.Bottles.Remove(bottle);
+            await cocktailDbContext.SaveChangesAsync();
+        }
     }
 
     /// <inheritdoc/>
