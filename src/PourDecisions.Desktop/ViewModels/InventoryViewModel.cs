@@ -10,7 +10,10 @@ using PourDecisions.Shared.Extensions;
 
 namespace PourDecisions.Desktop.ViewModels;
 
-public partial class InventoryViewModel(IBottleService bottleService, IDialogService dialogService)
+public partial class InventoryViewModel(
+    IBottleService bottleService,
+    IDialogService dialogService,
+    IIngredientService ingredientService)
     : ViewModelBase, IAsyncLoadable
 {
     [ObservableProperty]
@@ -32,7 +35,7 @@ public partial class InventoryViewModel(IBottleService bottleService, IDialogSer
     public async Task LoadAsync()
     {
         var bottleTask = bottleService.GetBottlesWithTypeAsync();
-        var ingredientTypeTask = bottleService.GetTrackedIngredientTypeNamesAsync();
+        var ingredientTypeTask = ingredientService.GetTrackedIngredientTypeNamesAsync();
 
         await Task.WhenAll(bottleTask, ingredientTypeTask);
 

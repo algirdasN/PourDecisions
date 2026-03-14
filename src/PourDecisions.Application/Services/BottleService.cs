@@ -13,7 +13,6 @@ public interface IBottleService
     Task<List<Bottle>> GetBottlesOfTypeAsync(int typeId);
     Task UpdateBottleFillLevelAsync(int bottleId, FillLevel newFill);
     Task DeleteBottleAsync(int bottleId);
-    Task<List<string>> GetTrackedIngredientTypeNamesAsync();
 }
 
 public class BottleService(CocktailDbContext cocktailDbContext) : IBottleService
@@ -70,14 +69,5 @@ public class BottleService(CocktailDbContext cocktailDbContext) : IBottleService
 
         bottle.FillLevel = newFill;
         await cocktailDbContext.SaveChangesAsync();
-    }
-
-    public async Task<List<string>> GetTrackedIngredientTypeNamesAsync()
-    {
-        return await cocktailDbContext.IngredientTypes
-            .Where(type => type.IsTracked)
-            .Select(type => type.Name)
-            .OrderBy(name => name)
-            .ToListAsync();
     }
 }
