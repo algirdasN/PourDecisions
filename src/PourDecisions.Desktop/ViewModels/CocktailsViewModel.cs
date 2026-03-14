@@ -3,10 +3,14 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PourDecisions.Application.AvailabilityEngine;
 using PourDecisions.Application.Services;
+using PourDecisions.Desktop.Services;
 
 namespace PourDecisions.Desktop.ViewModels;
 
-public partial class CocktailsViewModel(ICocktailService cocktailService, IAvailabilityService availabilityService)
+public partial class CocktailsViewModel(
+    IAvailabilityService availabilityService,
+    ICocktailService cocktailService,
+    IDialogService dialogService)
     : ViewModelBase, IAsyncLoadable
 {
     private List<CocktailSummaryViewModel> _allCocktails = [];
@@ -74,8 +78,20 @@ public partial class CocktailsViewModel(ICocktailService cocktailService, IAvail
 
     private void OnFavoriteToggled(int cocktailId, bool isFavorite)
     {
-        _ = cocktailService.SetFavoriteAsync(cocktailId, isFavorite);
+        _ = SetFavoriteAsync(cocktailId, isFavorite);
         FilterCocktails();
+    }
+
+    private async Task SetFavoriteAsync(int cocktailId, bool isFavorite)
+    {
+        try
+        {
+            await cocktailService.SetFavoriteAsync(cocktailId, isFavorite);
+        }
+        catch (Exception e)
+        {
+            await dialogService.ShowInformationDialogAsync("Failed to update favorite status", e.Message);
+        }
     }
 
     partial void OnShowAvailableOnlyChanged(bool value)

@@ -74,36 +74,48 @@ public partial class InventoryViewModel(
         AddBottleForm.OnCancelButtonClicked += OnAddFormCancelled;
     }
 
-    private async void OnAddBottleClicked(string typeName, string bottleName, int volume, FillLevel fillLevel)
+    private void OnAddBottleClicked(string typeName, string bottleName, int volume, FillLevel fillLevel)
     {
-        var bottle = await bottleService.AddBottleAsync(typeName, bottleName, volume, fillLevel);
-        var ingredientType = bottle.Type;
+        _ = AddBottleAsync(typeName, bottleName, volume, fillLevel);
+    }
 
-        var allBottles = await bottleService.GetBottlesOfTypeAsync(ingredientType.Id);
-        var ingredientViewModel = IngredientTypes.FirstOrDefault(type => type.Id == ingredientType.Id);
-
-        if (ingredientViewModel is null)
+    private async Task AddBottleAsync(string typeName, string bottleName, int volume, FillLevel fillLevel)
+    {
+        try
         {
-            ingredientViewModel = new IngredientTypeViewModel(ingredientType, allBottles);
-            ingredientViewModel.AddFormClicked += OnAddFormClicked;
-            ingredientViewModel.FillLevelChanged += OnFillLevelChanged;
-            ingredientViewModel.DeleteBottleClicked += OnDeleteButtonClicked;
+            var bottle = await bottleService.AddBottleAsync(typeName, bottleName, volume, fillLevel);
+            var ingredientType = bottle.Type;
 
-            IngredientTypes.InsertIntoSorted(ingredientViewModel, IngredientTypeViewModel.NameComparer);
+            var allBottles = await bottleService.GetBottlesOfTypeAsync(ingredientType.Id);
+            var ingredientViewModel = IngredientTypes.FirstOrDefault(type => type.Id == ingredientType.Id);
+
+            if (ingredientViewModel is null)
+            {
+                ingredientViewModel = new IngredientTypeViewModel(ingredientType, allBottles);
+                ingredientViewModel.AddFormClicked += OnAddFormClicked;
+                ingredientViewModel.FillLevelChanged += OnFillLevelChanged;
+                ingredientViewModel.DeleteBottleClicked += OnDeleteButtonClicked;
+
+                IngredientTypes.InsertIntoSorted(ingredientViewModel, IngredientTypeViewModel.NameComparer);
+            }
+            else
+            {
+                ingredientViewModel.LoadBottles(allBottles);
+            }
+
+            ingredientViewModel.IsExpanded = true;
+
+            if (!_ingredientTypeNames.Contains(ingredientType.Name))
+            {
+                _ingredientTypeNames.InsertIntoSorted(ingredientType.Name);
+            }
+
+            AddBottleForm?.IngredientTypeNames = new ObservableCollection<string>(_ingredientTypeNames);
         }
-        else
+        catch (Exception e)
         {
-            ingredientViewModel.LoadBottles(allBottles);
+            await dialogService.ShowInformationDialogAsync("Failed to add bottle", e.Message);
         }
-
-        ingredientViewModel.IsExpanded = true;
-
-        if (!_ingredientTypeNames.Contains(ingredientType.Name))
-        {
-            _ingredientTypeNames.InsertIntoSorted(ingredientType.Name);
-        }
-
-        AddBottleForm?.IngredientTypeNames = new ObservableCollection<string>(_ingredientTypeNames);
     }
 
     private void OnAddFormCancelled()
@@ -114,33 +126,57 @@ public partial class InventoryViewModel(
         IsAddingBottle = false;
     }
 
-    private async void OnFillLevelChanged(int bottleId, FillLevel newFill)
+    private void OnFillLevelChanged(int bottleId, FillLevel newFill)
     {
-        await bottleService.UpdateBottleFillLevelAsync(bottleId, newFill);
+        _ = UpdateBottleFillLevelAsync(bottleId, newFill);
     }
 
-    private async void OnDeleteButtonClicked(int bottleId, string bottleName, int typeId, string typeName)
+    private async Task UpdateBottleFillLevelAsync(int bottleId, FillLevel fillLevel)
     {
-        var message = $"Are you sure you want to delete '{bottleName}' ({typeName})?";
-
-        var result = await dialogService.ShowConfirmationDialogAsync("Delete bottle", message, "Delete", "Cancel");
-
-        if (result != ContentDialogResult.Primary)
+        try
         {
-            return;
+            await bottleService.UpdateBottleFillLevelAsync(bottleId, fillLevel);
         }
-
-        await bottleService.DeleteBottleAsync(bottleId);
-        var bottles = await bottleService.GetBottlesOfTypeAsync(typeId);
-        var ingredientViewModel = IngredientTypes.First(type => type.Id == typeId);
-
-        if (bottles.Count == 0)
+        catch (Exception e)
         {
-            IngredientTypes.Remove(ingredientViewModel);
+            await dialogService.ShowInformationDialogAsync("Failed to update bottle", e.Message);
         }
-        else
+    }
+
+    private void OnDeleteButtonClicked(int bottleId, string bottleName, int typeId, string typeName)
+    {
+        _ = DeleteBottle(bottleId, bottleName, typeId, typeName);
+    }
+
+    private async Task DeleteBottle(int bottleId, string bottleName, int typeId, string typeName)
+    {
+        try
         {
-            ingredientViewModel.LoadBottles(bottles);
+            var message = $"Are you sure you want to delete '{bottleName}' ({typeName})?";
+
+            var result = await dialogService.ShowConfirmationDialogAsync("Delete bottle", message, "Delete", "Cancel");
+
+            if (result != ContentDialogResult.Primary)
+            {
+                return;
+            }
+
+            await bottleService.DeleteBottleAsync(bottleId);
+            var bottles = await bottleService.GetBottlesOfTypeAsync(typeId);
+            var ingredientViewModel = IngredientTypes.First(type => type.Id == typeId);
+
+            if (bottles.Count == 0)
+            {
+                IngredientTypes.Remove(ingredientViewModel);
+            }
+            else
+            {
+                ingredientViewModel.LoadBottles(bottles);
+            }
+        }
+        catch (Exception e)
+        {
+            await dialogService.ShowInformationDialogAsync("Failed to delete bottle", e.Message);
         }
     }
 

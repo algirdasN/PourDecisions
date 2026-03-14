@@ -4,7 +4,7 @@ namespace PourDecisions.Desktop.Services;
 
 public interface IDialogService
 {
-    Task<ContentDialogResult> ShowInformationDialogAsync(string title, string message, string closeButtonText);
+    Task<ContentDialogResult> ShowInformationDialogAsync(string title, string message);
 
     Task<ContentDialogResult> ShowConfirmationDialogAsync(string title, string message, string primaryButtonText,
         string closeButtonText);
@@ -12,14 +12,13 @@ public interface IDialogService
 
 public class DialogService : IDialogService
 {
-    public async Task<ContentDialogResult> ShowInformationDialogAsync(string title, string message,
-        string closeButtonText)
+    public async Task<ContentDialogResult> ShowInformationDialogAsync(string title, string message)
     {
         var dialog = new ContentDialog
         {
             Title = title,
             Content = message,
-            CloseButtonText = closeButtonText
+            CloseButtonText = "Close"
         };
 
         return await dialog.ShowAsync();
