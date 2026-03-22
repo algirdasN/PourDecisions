@@ -15,6 +15,39 @@ public class IngredientServiceTests
     }
 
     [Fact]
+    public async Task GetIngredientTypeNamesAsync_ReturnsAllNamesInAlphabeticalOrder()
+    {
+        // Arrange
+        var options = CreateInMemoryOptions(nameof(GetIngredientTypeNamesAsync_ReturnsAllNamesInAlphabeticalOrder));
+        var types = new List<IngredientType>
+        {
+            new() { Id = 1, Name = "Gin", IsTracked = true },
+            new() { Id = 2, Name = "Vodka", IsTracked = true },
+            new() { Id = 3, Name = "Bourbon", IsTracked = false }
+        };
+
+        await using (var context = new CocktailDbContext(options))
+        {
+            await context.IngredientTypes.AddRangeAsync(types);
+            await context.SaveChangesAsync();
+        }
+
+        // Act
+        List<string> result;
+        await using (var context = new CocktailDbContext(options))
+        {
+            var service = new IngredientService(context);
+            result = await service.GetIngredientTypeNamesAsync();
+        }
+
+        // Assert
+        Assert.Equal(3, result.Count);
+        Assert.Equal("Bourbon", result[0]);
+        Assert.Equal("Gin", result[1]);
+        Assert.Equal("Vodka", result[2]);
+    }
+
+    [Fact]
     public async Task GetTrackedIngredientTypeNamesAsync_ReturnsOnlyTrackedNamesInAlphabeticalOrder()
     {
         // Arrange

@@ -15,7 +15,7 @@ public static class StringExtensions
         /// <returns>The specified string converted to the title case.</returns>
         public string ToTitleCase()
         {
-            return CultureInfo.CurrentCulture.TextInfo.ToTitleCase(str.ToLower().Trim());
+            return CultureInfo.CurrentCulture.TextInfo.ToTitleCase(str.Trim().ToLower());
         }
     }
 }

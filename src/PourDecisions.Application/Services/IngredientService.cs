@@ -9,6 +9,12 @@ namespace PourDecisions.Application.Services;
 public interface IIngredientService
 {
     /// <summary>
+    /// Asynchronously retrieves the names of all ingredient types in alphabetical order.
+    /// </summary>
+    /// <returns>A sorted list of all ingredient type names.</returns>
+    Task<List<string>> GetIngredientTypeNamesAsync();
+
+    /// <summary>
     /// Asynchronously retrieves the names of all tracked ingredient types in alphabetical order.
     /// </summary>
     /// <returns>A sorted list of tracked ingredient type names.</returns>
@@ -24,6 +30,15 @@ public interface IIngredientService
 /// </remarks>
 public class IngredientService(CocktailDbContext cocktailDbContext) : IIngredientService
 {
+    /// <inheritdoc/>
+    public async Task<List<string>> GetIngredientTypeNamesAsync()
+    {
+        return await cocktailDbContext.IngredientTypes
+            .Select(type => type.Name)
+            .OrderBy(name => name)
+            .ToListAsync();
+    }
+
     /// <inheritdoc/>
     public async Task<List<string>> GetTrackedIngredientTypeNamesAsync()
     {
