@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PourDecisions.Core.Entities;
 using PourDecisions.Core.Enums;
+using PourDecisions.Shared.Extensions;
 
 namespace PourDecisions.Desktop.ViewModels;
 
@@ -43,7 +44,7 @@ public partial class IngredientTypeViewModel : ViewModelBase
             vm.DeleteBottleClicked -= OnDeleteBottleClicked;
         }
 
-        var bottleViewModels = bottles
+        Bottles = bottles
             .OrderBy(bottle => bottle.Name)
             .Select(bottle =>
             {
@@ -52,9 +53,7 @@ public partial class IngredientTypeViewModel : ViewModelBase
                 vm.DeleteBottleClicked += OnDeleteBottleClicked;
                 return vm;
             })
-            .ToList();
-
-        Bottles = new ObservableCollection<BottleViewModel>(bottleViewModels);
+            .ToObservableCollection();
     }
 
     [RelayCommand]

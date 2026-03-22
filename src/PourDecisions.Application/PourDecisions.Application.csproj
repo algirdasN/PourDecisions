@@ -9,6 +9,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\PourDecisions.Core\PourDecisions.Core.csproj"/>
+        <ProjectReference Include="..\PourDecisions.Shared\PourDecisions.Shared.csproj"/>
     </ItemGroup>
 
     <ItemGroup>

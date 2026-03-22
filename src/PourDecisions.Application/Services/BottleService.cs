@@ -1,8 +1,8 @@
-using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using PourDecisions.Core.Data;
 using PourDecisions.Core.Entities;
 using PourDecisions.Core.Enums;
+using PourDecisions.Shared.Extensions;
 
 namespace PourDecisions.Application.Services;
 
@@ -70,9 +70,7 @@ public class BottleService(CocktailDbContext cocktailDbContext) : IBottleService
 
         if (ingredientType is null)
         {
-            var capitalizedTypeName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(typeName.ToLower());
-
-            ingredientType = new IngredientType { Name = capitalizedTypeName, IsTracked = true };
+            ingredientType = new IngredientType { Name = typeName.ToTitleCase(), IsTracked = true };
         }
         else
         {
