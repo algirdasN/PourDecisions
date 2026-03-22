@@ -26,6 +26,9 @@
         <DataTemplate DataType="{x:Type vm:EditCocktailsViewModel}">
             <views:EditCocktailsView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:CocktailEditItemViewModel}">
+            <views:CocktailEditItemView />
+        </DataTemplate>
         <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
             <views:SettingsView />
         </DataTemplate>
@@ -37,5 +40,6 @@
 
     <Application.Resources>
         <converters:AvailabilityStatusToColorConverter x:Key="AvailabilityToColor" />
+        <converters:BoolToFavoriteLabelConverter x:Key="BoolToFavoriteLabel" />
     </Application.Resources>
 </Application>

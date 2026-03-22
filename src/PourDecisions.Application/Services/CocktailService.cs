@@ -151,13 +151,10 @@ public class CocktailService(CocktailDbContext cocktailDbContext) : ICocktailSer
     public async Task DeleteCocktailAsync(int cocktailId)
     {
         var cocktail = await cocktailDbContext.Cocktails
-            .FirstOrDefaultAsync(c => c.Id == cocktailId);
+            .FirstAsync(c => c.Id == cocktailId);
 
-        if (cocktail != null)
-        {
-            cocktailDbContext.Cocktails.Remove(cocktail);
-            await cocktailDbContext.SaveChangesAsync();
-        }
+        cocktailDbContext.Cocktails.Remove(cocktail);
+        await cocktailDbContext.SaveChangesAsync();
     }
 
     /// <summary>

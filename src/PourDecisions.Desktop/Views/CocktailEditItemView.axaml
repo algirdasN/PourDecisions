@@ -1,0 +1,140 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PourDecisions.Desktop.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="PourDecisions.Desktop.Views.CocktailEditItemView"
+             x:DataType="vm:CocktailEditItemViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="DataValidationErrors">
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <ContentPresenter Name="PART_ContentPresenter"
+                                      Content="{TemplateBinding Content}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}" />
+                </ControlTemplate>
+            </Setter>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
+        <TextBlock Grid.Row="0" Text="{Binding Header}"
+                   TextAlignment="Center" />
+        <Grid Grid.Row="1" ColumnDefinitions="Auto,*">
+            <TextBlock Grid.Row="0" Text="Name: " />
+            <TextBox Grid.Column="1" Text="{Binding Name}" />
+        </Grid>
+        <Grid Grid.Row="2" ColumnDefinitions="*,*">
+            <Grid Grid.Column="0" RowDefinitions="Auto,Auto,Auto,Auto,Auto" Grid.IsSharedSizeScope="True">
+                <ItemsControl Name="IngredientList" Grid.Row="0" ItemsSource="{Binding Ingredients}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition SharedSizeGroup="Amount" Width="Auto" />
+                                    <ColumnDefinition SharedSizeGroup="Unit" Width="Auto" />
+                                    <ColumnDefinition SharedSizeGroup="Of" Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition SharedSizeGroup="Button" Width="Auto" />
+                                    <ColumnDefinition SharedSizeGroup="Button" Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0" Text="{Binding AmountText}"
+                                         TextAlignment="Right"
+                                         VerticalAlignment="Stretch"
+                                         VerticalContentAlignment="Center" />
+                                <ComboBox Grid.Column="1" ItemsSource="{Binding  AmountUnits}"
+                                          SelectedItem="{Binding Unit}"
+                                          HorizontalAlignment="Stretch"
+                                          VerticalAlignment="Center"
+                                          VerticalContentAlignment="Center" />
+                                <TextBlock Grid.Column="2" Text=" of "
+                                           VerticalAlignment="Center" />
+                                <!-- ReSharper disable once Xaml.PossibleNullReferenceException -->
+                                <AutoCompleteBox Grid.Column="3"
+                                                 ItemsSource="{Binding #IngredientList.((vm:CocktailEditItemViewModel)DataContext).IngredientTypeNames}"
+                                                 Text="{Binding Name, Mode=TwoWay}"
+                                                 FilterMode="ContainsOrdinal"
+                                                 MinimumPrefixLength="0"
+                                                 HorizontalAlignment="Stretch"
+                                                 VerticalAlignment="Center" />
+                                <Button Grid.Column="4"
+                                        Content="{Binding NavigationIcon}"
+                                        Command="{Binding NavigateCommand}"
+                                        VerticalAlignment="Stretch"
+                                        VerticalContentAlignment="Center" />
+                                <Button Grid.Column="5" Content="🗑︎"
+                                        Command="{Binding DeleteCommand}"
+                                        VerticalAlignment="Stretch"
+                                        VerticalContentAlignment="Center" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition SharedSizeGroup="Amount" Width="Auto" />
+                        <ColumnDefinition SharedSizeGroup="Unit" Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition SharedSizeGroup="Button" Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Grid.ColumnSpan="2" Name="AmountWidth"
+                               Opacity="0"
+                               IsHitTestVisible="False"
+                               HorizontalAlignment="Stretch" />
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding LongestAmountUnit}"
+                               Padding="{DynamicResource ComboBoxPadding}"
+                               Margin="0,0,32,0"
+                               Opacity="0"
+                               IsHitTestVisible="False" />
+                    <Button Grid.Column="3" Content="➕" Command="{Binding AddIngredientCommand}" />
+                </Grid>
+                <Grid Grid.Row="2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition SharedSizeGroup="Of" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="{Binding AmountError}"
+                               Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                               FontSize="12"
+                               TextWrapping="Wrap"
+                               Width="{Binding #AmountWidth.Bounds.Width}" />
+                    <TextBlock Grid.Column="2" Text="{Binding NameError}"
+                               Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                               FontSize="12"
+                               TextWrapping="Wrap" />
+                </Grid>
+            </Grid>
+            <Grid Grid.Column="1" RowDefinitions="*, *">
+                <Viewbox Grid.Row="0" Stretch="Uniform">
+                    <Rectangle Fill="Aquamarine" Height="100" Width="100" />
+                </Viewbox>
+                <Grid Grid.Row="1" ColumnDefinitions="*,*">
+                    <Button Grid.Column="0" Content="Upload" HorizontalAlignment="Center" />
+                    <Button Grid.Column="1" Content="Clear" HorizontalAlignment="Center" />
+                </Grid>
+            </Grid>
+        </Grid>
+        <Grid Grid.Row="3" ColumnDefinitions="Auto,*">
+            <TextBlock Grid.Column="0" Text="Instructions: " />
+            <TextBox Grid.Column="1" Text="{Binding Instructions}"
+                     AcceptsReturn="True"
+                     TextWrapping="Wrap"
+                     VerticalAlignment="Stretch" />
+        </Grid>
+        <Grid Grid.Row="4" ColumnDefinitions="*,*,*">
+            <Button Grid.Column="0" Content="{Binding SaveButtonLabel}"
+                    Command="{Binding SaveCocktailCommand}"
+                    HorizontalAlignment="Center" />
+            <Button Grid.Column="1" Content="Undo"
+                    Command="{Binding UndoFormCommand}"
+                    HorizontalAlignment="Center" />
+            <Button Grid.Column="2" Content="Delete"
+                    Command="{Binding DeleteCocktailCommand}"
+                    HorizontalAlignment="Center" />
+        </Grid>
+    </Grid>
+</UserControl>
