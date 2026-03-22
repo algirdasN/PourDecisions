@@ -58,8 +58,7 @@ public class CocktailServiceTests
             TypeId = 1,
             Type = ingredientType,
             AmountValue = 60,
-            AmountUnit = AmountUnit.Ml,
-            IsOptional = false
+            AmountUnit = AmountUnit.Ml
         };
         var cocktail = new Cocktail
         {

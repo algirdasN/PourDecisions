@@ -17,7 +17,7 @@ public partial class CocktailSummaryViewModel(Cocktail cocktail, AvailabilityRes
 
     public List<IngredientAvailabilityInfo> Ingredients { get; } = cocktail.CocktailIngredients
         .Select(ci => new IngredientAvailabilityInfo(IngredientDisplayText(ci),
-            availabilityResult.MissingRequired.Any(missing => missing.TypeId == ci.TypeId)))
+            availabilityResult.MissingIngredients.Any(missing => missing.TypeId == ci.TypeId)))
         .ToList();
 
     public AvailabilityStatus AvailabilityStatus { get; } = availabilityResult.Status;
@@ -25,7 +25,7 @@ public partial class CocktailSummaryViewModel(Cocktail cocktail, AvailabilityRes
     public string AvailabilityLabel { get; } = availabilityResult.Status switch
     {
         AvailabilityStatus.Available => "✔️ available",
-        AvailabilityStatus.Unavailable => $"❌ missing {availabilityResult.MissingRequired.Count}",
+        AvailabilityStatus.Unavailable => $"❌ missing {availabilityResult.MissingIngredients.Count}",
         _ => throw new ArgumentOutOfRangeException()
     };
 
@@ -38,7 +38,6 @@ public partial class CocktailSummaryViewModel(Cocktail cocktail, AvailabilityRes
 
     private static string IngredientDisplayText(CocktailIngredient ci)
     {
-        return $"{ci.AmountValue} {ci.AmountUnit.ToString().ToLowerInvariant()} of {ci.Type.Name.ToLowerInvariant()}" +
-               (ci.IsOptional ? " (optional)" : string.Empty);
+        return $"{ci.AmountValue} {ci.AmountUnit.ToString().ToLowerInvariant()} of {ci.Type.Name.ToLowerInvariant()}";
     }
 }

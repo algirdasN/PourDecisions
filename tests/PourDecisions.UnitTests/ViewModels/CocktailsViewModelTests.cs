@@ -23,8 +23,7 @@ public class CocktailsViewModelTests
         {
             {
                 1,
-                new AvailabilityResult(AvailabilityStatus.Available, new List<CocktailIngredient>(),
-                    new List<CocktailIngredient>())
+                new AvailabilityResult(AvailabilityStatus.Available, new List<CocktailIngredient>())
             }
         });
 
@@ -52,13 +51,11 @@ public class CocktailsViewModelTests
         {
             {
                 1,
-                new AvailabilityResult(AvailabilityStatus.Available, new List<CocktailIngredient>(),
-                    new List<CocktailIngredient>())
+                new AvailabilityResult(AvailabilityStatus.Available, new List<CocktailIngredient>())
             },
             {
                 2,
-                new AvailabilityResult(AvailabilityStatus.Available, new List<CocktailIngredient>(),
-                    new List<CocktailIngredient>())
+                new AvailabilityResult(AvailabilityStatus.Available, new List<CocktailIngredient>())
             }
         });
 
@@ -86,13 +83,11 @@ public class CocktailsViewModelTests
         {
             {
                 1,
-                new AvailabilityResult(AvailabilityStatus.Available, new List<CocktailIngredient>(),
-                    new List<CocktailIngredient>())
+                new AvailabilityResult(AvailabilityStatus.Available, new List<CocktailIngredient>())
             },
             {
                 2,
-                new AvailabilityResult(AvailabilityStatus.Unavailable, new List<CocktailIngredient> { new() },
-                    new List<CocktailIngredient>())
+                new AvailabilityResult(AvailabilityStatus.Unavailable, new List<CocktailIngredient> { new() })
             }
         });
 
@@ -120,13 +115,11 @@ public class CocktailsViewModelTests
         {
             {
                 1,
-                new AvailabilityResult(AvailabilityStatus.Available, new List<CocktailIngredient>(),
-                    new List<CocktailIngredient>())
+                new AvailabilityResult(AvailabilityStatus.Available, new List<CocktailIngredient>())
             },
             {
                 2,
-                new AvailabilityResult(AvailabilityStatus.Available, new List<CocktailIngredient>(),
-                    new List<CocktailIngredient>())
+                new AvailabilityResult(AvailabilityStatus.Available, new List<CocktailIngredient>())
             }
         });
 
@@ -172,8 +165,7 @@ public class CocktailsViewModelTests
         {
             {
                 1,
-                new AvailabilityResult(AvailabilityStatus.Available, new List<CocktailIngredient>(),
-                    new List<CocktailIngredient>())
+                new AvailabilityResult(AvailabilityStatus.Available, new List<CocktailIngredient>())
             }
         });
 

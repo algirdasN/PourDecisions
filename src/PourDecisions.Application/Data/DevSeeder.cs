@@ -62,7 +62,7 @@ public static class DevSeeder
             {
                 new() { Type = dryGin, AmountValue = 60, AmountUnit = AmountUnit.Ml },
                 new() { Type = dryVermouth, AmountValue = 10, AmountUnit = AmountUnit.Ml },
-                new() { Type = olive, AmountValue = 1, AmountUnit = AmountUnit.Piece, IsOptional = true }
+                new() { Type = olive, AmountValue = 1, AmountUnit = AmountUnit.Piece }
             }
         };
 
