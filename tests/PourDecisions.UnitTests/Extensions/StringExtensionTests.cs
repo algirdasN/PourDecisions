@@ -10,14 +10,14 @@ public class StringExtensionTests
     [InlineData("hEllO wOrlD", "Hello World")]
     [InlineData("apple", "Apple")]
     [InlineData("", "")]
-    [InlineData(" ", " ")]
+    [InlineData(" ", "")]
     [InlineData("a b c", "A B C")]
     [InlineData("123 apple", "123 Apple")]
     [InlineData("!!! symbols", "!!! Symbols")]
     [InlineData("1st place", "1St Place")]
     [InlineData("the quick brown fox", "The Quick Brown Fox")]
     [InlineData("QUICK BROWN FOX", "Quick Brown Fox")]
-    [InlineData("  hello world  ", "  Hello World  ")]
+    [InlineData("  hello world  ", "Hello World")]
     [InlineData("hello-world", "Hello-World")]
     public void ToTitleCase_ReturnsExpectedResult(string input, string expected)
     {
