@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PourDecisions.Core.Enums;
+using PourDecisions.Desktop.Validators;
 
 namespace PourDecisions.Desktop.ViewModels;
 
@@ -23,12 +24,12 @@ public partial class AddBottleViewModel(IEnumerable<string> ingredientTypeNames,
     private string _ingredientTypeName = typeName;
 
     [ObservableProperty]
+    private ObservableCollection<string> _ingredientTypeNames = new(ingredientTypeNames);
+
+    [ObservableProperty]
     [NotifyDataErrorInfo]
     [CustomValidation(typeof(AddBottleViewModel), nameof(ValidateVolume))]
     private string _volumeText = string.Empty;
-
-    [ObservableProperty]
-    private ObservableCollection<string> _ingredientTypeNames = new(ingredientTypeNames);
 
     public FillLevel[] FillLevels { get; } = Enum.GetValues<FillLevel>();
 
@@ -61,11 +62,6 @@ public partial class AddBottleViewModel(IEnumerable<string> ingredientTypeNames,
 
     public static ValidationResult? ValidateVolume(string value, ValidationContext context)
     {
-        if (!int.TryParse(value, out var volume) || volume <= 0)
-        {
-            return new ValidationResult("Volume must be a positive number");
-        }
-
-        return ValidationResult.Success;
+        return IntegerValidator.ValidatePositive(value, "Volume must be a positive integer");
     }
 }

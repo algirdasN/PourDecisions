@@ -38,7 +38,7 @@
                                 <Grid RowDefinitions="Auto,*" Grid.IsSharedSizeScope="True">
                                     <Grid Grid.Row="0">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition />
+                                            <ColumnDefinition Width="*" />
                                             <ColumnDefinition SharedSizeGroup="Volume" Width="Auto" />
                                             <ColumnDefinition SharedSizeGroup="Fill" Width="Auto" />
                                             <ColumnDefinition SharedSizeGroup="Delete" Width="Auto" />
@@ -53,7 +53,7 @@
                                             <DataTemplate>
                                                 <Grid>
                                                     <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition />
+                                                        <ColumnDefinition Width="*" />
                                                         <ColumnDefinition SharedSizeGroup="Volume" Width="Auto" />
                                                         <ColumnDefinition SharedSizeGroup="Fill" Width="Auto" />
                                                         <ColumnDefinition SharedSizeGroup="Delete" Width="Auto" />
@@ -69,11 +69,11 @@
                                                             Command="{Binding CycleFillLevelCommand}"
                                                             HorizontalAlignment="Center"
                                                             VerticalAlignment="Center" />
-                                                    <HyperlinkButton Grid.Column="3"
-                                                                     Content="Delete"
-                                                                     Command="{Binding DeleteBottleCommand}"
-                                                                     HorizontalAlignment="Center"
-                                                                     VerticalAlignment="Center" />
+                                                    <Button Grid.Column="3"
+                                                            Content="🗑︎"
+                                                            Command="{Binding DeleteBottleCommand}"
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center" />
                                                 </Grid>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>

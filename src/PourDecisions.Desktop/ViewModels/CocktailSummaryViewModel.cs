@@ -10,7 +10,6 @@ public partial class CocktailSummaryViewModel(Cocktail cocktail, AvailabilityRes
     private readonly int _id = cocktail.Id;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(FavoriteLabel))]
     private bool _isFavorite = cocktail.IsFavorite;
 
     public string Name { get; } = cocktail.Name;
@@ -29,9 +28,6 @@ public partial class CocktailSummaryViewModel(Cocktail cocktail, AvailabilityRes
         AvailabilityStatus.Unavailable => $"❌ missing {availabilityResult.MissingRequired.Count}",
         _ => throw new ArgumentOutOfRangeException()
     };
-
-
-    public string FavoriteLabel => IsFavorite ? "⭐️ " : string.Empty;
 
     public event Action<int, bool>? FavoriteToggled;
 
