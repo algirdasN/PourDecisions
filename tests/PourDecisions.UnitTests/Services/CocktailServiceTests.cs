@@ -156,6 +156,47 @@ public class CocktailServiceTests
     }
 
     [Fact]
+    public async Task GetSummaryAsync_ReturnsCorrectSummary()
+    {
+        // Arrange
+        var options = CreateInMemoryOptions(nameof(GetSummaryAsync_ReturnsCorrectSummary));
+        var cocktail = new Cocktail
+            { Id = 1, Name = "Martini", IsFavorite = true, Instructions = "Stir", CocktailIngredients = [] };
+
+        await using (var context = new CocktailDbContext(options))
+        {
+            await context.AddRangeAsync(cocktail);
+            await context.SaveChangesAsync();
+        }
+
+        // Act
+        CocktailEditSummary result;
+        await using (var context = new CocktailDbContext(options))
+        {
+            var service = new CocktailService(context);
+            result = await service.GetSummaryAsync(1);
+        }
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(1, result.Id);
+        Assert.Equal("Martini", result.Name);
+        Assert.True(result.IsFavorite);
+    }
+
+    [Fact]
+    public async Task GetSummaryAsync_WithInvalidId_ThrowsException()
+    {
+        // Arrange
+        var options = CreateInMemoryOptions(nameof(GetSummaryAsync_WithInvalidId_ThrowsException));
+
+        // Act & Assert
+        await using var context = new CocktailDbContext(options);
+        var service = new CocktailService(context);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.GetSummaryAsync(999));
+    }
+
+    [Fact]
     public async Task GetAllSummariesAsync_ReturnsAllSummaries()
     {
         // Arrange
