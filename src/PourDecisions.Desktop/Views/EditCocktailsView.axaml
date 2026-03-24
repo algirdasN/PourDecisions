@@ -11,7 +11,7 @@
         <Grid Grid.Column="0" RowDefinitions="Auto,*">
             <TextBlock Grid.Row="0"
                        Text="{Binding EmptyStateMessage}"
-                       IsVisible="{Binding !HasCocktails}"
+                       IsVisible="{Binding !HasExistingCocktails}"
                        HorizontalAlignment="Center" />
             <ListBox Grid.Row="1"
                      ItemsSource="{Binding CocktailSummaries}"

@@ -25,6 +25,12 @@ public interface ICocktailService
     Task<List<Cocktail>> GetAllWithIngredientsAsync();
 
     /// <summary>
+    /// Asynchronously retrieves a summary of a single cocktail.
+    /// </summary>
+    /// <returns>A list of all <see cref="CocktailEditSummary"/> objects.</returns>
+    Task<CocktailEditSummary> GetSummaryAsync(int cocktailId);
+
+    /// <summary>
     /// Asynchronously retrieves a summary list of all cocktails.
     /// </summary>
     /// <returns>A list of all <see cref="CocktailEditSummary"/> objects.</returns>
@@ -95,6 +101,15 @@ public class CocktailService(CocktailDbContext cocktailDbContext) : ICocktailSer
     }
 
     /// <inheritdoc/>
+    public async Task<CocktailEditSummary> GetSummaryAsync(int cocktailId)
+    {
+        var cocktail = await cocktailDbContext.Cocktails
+            .FirstAsync(c => c.Id == cocktailId);
+
+        return new CocktailEditSummary(cocktail.Id, cocktail.Name, cocktail.IsFavorite);
+    }
+
+    /// <inheritdoc/>
     public async Task<List<CocktailEditSummary>> GetAllSummariesAsync()
     {
         return await cocktailDbContext.Cocktails
@@ -125,10 +140,8 @@ public class CocktailService(CocktailDbContext cocktailDbContext) : ICocktailSer
         string instructions)
     {
         var cocktail = await cocktailDbContext.Cocktails
-            .Include(cocktail => cocktail.CocktailIngredients)
+            .Include(c => c.CocktailIngredients)
             .FirstAsync(c => c.Id == id);
-
-        cocktail.CocktailIngredients.Clear();
 
         cocktail.Name = name.ToTitleCase();
         cocktail.Instructions = instructions;

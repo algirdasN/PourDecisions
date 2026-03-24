@@ -2,11 +2,9 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using CommunityToolkit.Mvvm.Messaging;
 using PourDecisions.Application.Models;
 using PourDecisions.Core.Entities;
 using PourDecisions.Core.Enums;
-using PourDecisions.Desktop.Models;
 
 namespace PourDecisions.Desktop.ViewModels;
 
@@ -16,7 +14,6 @@ public partial class CocktailIngredientViewModel : ViewModelBase
     [NotifyDataErrorInfo]
     [CustomValidation(typeof(CocktailIngredientViewModel), nameof(ValidateAmount))]
     private string _amountText;
-
 
     [ObservableProperty]
     private bool _hasDuplicateName;
@@ -49,31 +46,36 @@ public partial class CocktailIngredientViewModel : ViewModelBase
     public string NavigationIcon => IsFirst ? "﹀" : "︿";
 
     public event Action? OnChanged;
-    public event Action<CocktailIngredientViewModel>? OnNavigationIconClicked;
+    public event Action<CocktailIngredientViewModel, bool>? OnNavigationIconClicked;
     public event Action<CocktailIngredientViewModel>? OnDeleteClicked;
+    public event Action<object, string?, string?>? OnValidationChanged;
+    public event Action? OnDuplicateCheckNeeded;
 
     public CocktailIngredientSummary GetIngredientData()
     {
-        return new CocktailIngredientSummary(int.Parse(AmountText), Unit, Name);
+        return int.TryParse(AmountText, out var amount)
+            ? new CocktailIngredientSummary(amount, Unit, Name)
+            : throw new InvalidOperationException("Amount must be a valid integer");
     }
 
-    public new void ValidateAllProperties()
+    public void TriggerValidation()
     {
-        base.ValidateAllProperties();
+        ValidateAllProperties();
     }
 
     [RelayCommand]
     private void Navigate()
     {
-        OnNavigationIconClicked?.Invoke(this);
+        OnChanged?.Invoke();
+        OnNavigationIconClicked?.Invoke(this, IsFirst);
     }
 
     [RelayCommand]
     private void Delete()
     {
-        OnDeleteClicked?.Invoke(this);
         OnChanged?.Invoke();
-        WeakReferenceMessenger.Default.Send(new DuplicateNameCheckMessage());
+        OnDeleteClicked?.Invoke(this);
+        OnDuplicateCheckNeeded?.Invoke();
     }
 
     private void OnErrorsChanged(object? sender, DataErrorsChangedEventArgs e)
@@ -95,7 +97,7 @@ public partial class CocktailIngredientViewModel : ViewModelBase
             var result => result.ErrorMessage ?? "Unknown error"
         };
 
-        WeakReferenceMessenger.Default.Send(new IngredientValidationChangedMessage(sender, amountError, nameError));
+        OnValidationChanged?.Invoke(sender, amountError, nameError);
     }
 
     partial void OnAmountTextChanged(string value)
@@ -111,7 +113,7 @@ public partial class CocktailIngredientViewModel : ViewModelBase
     partial void OnNameChanged(string value)
     {
         OnChanged?.Invoke();
-        WeakReferenceMessenger.Default.Send(new DuplicateNameCheckMessage());
+        OnDuplicateCheckNeeded?.Invoke();
     }
 
     partial void OnHasDuplicateNameChanged(bool value)

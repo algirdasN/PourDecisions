@@ -1,11 +1,9 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using CommunityToolkit.Mvvm.Messaging;
 using PourDecisions.Application.Models;
 using PourDecisions.Core.Entities;
 using PourDecisions.Core.Enums;
-using PourDecisions.Desktop.Models;
 using PourDecisions.Shared.Extensions;
 
 namespace PourDecisions.Desktop.ViewModels;
@@ -29,7 +27,7 @@ public partial class CocktailEditItemViewModel : ViewModelBase
     private string _instructions;
 
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(UndoFormCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SaveCocktailCommand))]
     private bool _isDirty;
 
     [ObservableProperty]
@@ -48,7 +46,7 @@ public partial class CocktailEditItemViewModel : ViewModelBase
                 .Select(CreateIngredientViewModel)
                 .ToObservableCollection();
 
-        Ingredients[0].IsFirst = true;
+        Ingredients.FirstOrDefault()?.IsFirst = true;
         Ingredients.CollectionChanged += (_, _) =>
         {
             for (var i = 0; i < Ingredients.Count; i++)
@@ -61,36 +59,15 @@ public partial class CocktailEditItemViewModel : ViewModelBase
         _instructions = cocktail?.Instructions ?? string.Empty;
         _name = cocktail?.Name ?? string.Empty;
         Header = cocktail is null ? "Add new cocktail" : $"Edit cocktail: '{cocktail.Name}'";
-
-        WeakReferenceMessenger.Default.Register<IngredientValidationChangedMessage>(this,
-            (_, m) =>
-            {
-                _errorMap[m.Sender] = (m.AmountError, m.NameError);
-                RefreshErrors();
-            });
-
-        WeakReferenceMessenger.Default.Register<DuplicateNameCheckMessage>(this, (_, _) =>
-        {
-            var duplicates = Ingredients
-                .GroupBy(ingredient => ingredient.Name.ToLower())
-                .Where(group => !string.IsNullOrEmpty(group.Key) && group.Count() > 1)
-                .SelectMany(g => g)
-                .ToList();
-
-            foreach (var ingredient in Ingredients)
-            {
-                ingredient.HasDuplicateName = duplicates.Contains(ingredient);
-            }
-        });
+        _isDirty = false;
     }
 
     public string Header { get; }
-    public string SaveButtonLabel => _id is null ? "Add" : "Edit";
+    public string SaveButtonLabel => _id is null ? "Add" : "Save";
     public bool CanDeleteCocktail => _id is not null;
     public string LongestAmountUnit { get; } = Enum.GetNames<AmountUnit>().MaxBy(x => x.Length)!;
 
     public event Action<int?, string, IList<CocktailIngredientSummary>, string>? SaveCocktailClicked;
-    public event Action<int?>? OnUndoChangesClicked;
     public event Action<int, string>? OnDeleteCocktailClicked;
 
     [RelayCommand]
@@ -99,12 +76,12 @@ public partial class CocktailEditItemViewModel : ViewModelBase
         Ingredients.Add(CreateIngredientViewModel(null));
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(IsDirty))]
     private void SaveCocktail()
     {
         foreach (var ingredient in Ingredients)
         {
-            ingredient.ValidateAllProperties();
+            ingredient.TriggerValidation();
         }
 
         if (_errorMap.Any(kvp => kvp.Value.AmountError is not null || kvp.Value.NameError is not null))
@@ -117,12 +94,7 @@ public partial class CocktailEditItemViewModel : ViewModelBase
             .ToList();
 
         SaveCocktailClicked?.Invoke(_id, Name, ingredientData, Instructions);
-    }
-
-    [RelayCommand(CanExecute = nameof(IsDirty))]
-    private void UndoForm()
-    {
-        OnUndoChangesClicked?.Invoke(_id);
+        IsDirty = false;
     }
 
     [RelayCommand(CanExecute = nameof(CanDeleteCocktail))]
@@ -136,10 +108,10 @@ public partial class CocktailEditItemViewModel : ViewModelBase
         OnDeleteCocktailClicked?.Invoke(_id.Value, Name);
     }
 
-    private void OnNavigationIconClicked(CocktailIngredientViewModel cocktailIngredient)
+    private void OnNavigationIconClicked(CocktailIngredientViewModel cocktailIngredient, bool moveDown)
     {
         var index = Ingredients.IndexOf(cocktailIngredient);
-        var newIndex = index == 0 ? 1 : index - 1;
+        var newIndex = moveDown ? index + 1 : index - 1;
         Ingredients.Move(index, newIndex);
     }
 
@@ -148,6 +120,8 @@ public partial class CocktailEditItemViewModel : ViewModelBase
         cocktailIngredient.OnChanged -= SetDirty;
         cocktailIngredient.OnNavigationIconClicked -= OnNavigationIconClicked;
         cocktailIngredient.OnDeleteClicked -= OnDeleteClicked;
+        cocktailIngredient.OnValidationChanged -= OnValidationChanged;
+        cocktailIngredient.OnDuplicateCheckNeeded -= OnDuplicateCheckNeeded;
 
         Ingredients.Remove(cocktailIngredient);
         if (Ingredients.Count == 0)
@@ -159,12 +133,34 @@ public partial class CocktailEditItemViewModel : ViewModelBase
         RefreshErrors();
     }
 
+    private void OnValidationChanged(object sender, string? amountError, string? nameError)
+    {
+        _errorMap[sender] = (amountError, nameError);
+        RefreshErrors();
+    }
+
+    private void OnDuplicateCheckNeeded()
+    {
+        var duplicates = Ingredients
+            .GroupBy(ingredient => ingredient.Name.ToLower())
+            .Where(group => !string.IsNullOrEmpty(group.Key) && group.Count() > 1)
+            .SelectMany(g => g)
+            .ToList();
+
+        foreach (var ingredient in Ingredients)
+        {
+            ingredient.HasDuplicateName = duplicates.Contains(ingredient);
+        }
+    }
+
     private CocktailIngredientViewModel CreateIngredientViewModel(CocktailIngredient? cocktailIngredient)
     {
         var vm = new CocktailIngredientViewModel(cocktailIngredient);
         vm.OnChanged += SetDirty;
         vm.OnNavigationIconClicked += OnNavigationIconClicked;
         vm.OnDeleteClicked += OnDeleteClicked;
+        vm.OnValidationChanged += OnValidationChanged;
+        vm.OnDuplicateCheckNeeded += OnDuplicateCheckNeeded;
         return vm;
     }
 
@@ -180,11 +176,6 @@ public partial class CocktailEditItemViewModel : ViewModelBase
     }
 
     partial void OnInstructionsChanged(string value)
-    {
-        SetDirty();
-    }
-
-    private void OnIngredientChanged()
     {
         SetDirty();
     }

@@ -125,14 +125,11 @@
                      TextWrapping="Wrap"
                      VerticalAlignment="Stretch" />
         </Grid>
-        <Grid Grid.Row="4" ColumnDefinitions="*,*,*">
+        <Grid Grid.Row="4" ColumnDefinitions="*,*">
             <Button Grid.Column="0" Content="{Binding SaveButtonLabel}"
                     Command="{Binding SaveCocktailCommand}"
                     HorizontalAlignment="Center" />
-            <Button Grid.Column="1" Content="Undo"
-                    Command="{Binding UndoFormCommand}"
-                    HorizontalAlignment="Center" />
-            <Button Grid.Column="2" Content="Delete"
+            <Button Grid.Column="1" Content="Delete"
                     Command="{Binding DeleteCocktailCommand}"
                     HorizontalAlignment="Center" />
         </Grid>

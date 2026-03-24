@@ -18,7 +18,7 @@ public partial class EditCocktailsViewModel(
     private CocktailEditItemViewModel? _cocktailEditItemViewModel;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasCocktails))]
+    [NotifyPropertyChangedFor(nameof(HasExistingCocktails))]
     private ObservableCollection<CocktailEditSummary> _cocktailSummaries = [];
 
     private ObservableCollection<string> _ingredientTypeNames = [];
@@ -30,7 +30,7 @@ public partial class EditCocktailsViewModel(
     [ObservableProperty]
     private CocktailEditSummary? _selectedCocktail;
 
-    public bool HasCocktails => CocktailSummaries.Count > 1;
+    public bool HasExistingCocktails => CocktailSummaries.Count > 1;
 
     public string EmptyStateMessage => "No cocktails available. Add cocktails using the form on the right.";
 
@@ -47,7 +47,7 @@ public partial class EditCocktailsViewModel(
             .Prepend(new CocktailEditSummary(null, "<New Cocktail>", false))
             .ToObservableCollection();
 
-        CocktailSummaries.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasCocktails));
+        CocktailSummaries.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasExistingCocktails));
 
         SelectedCocktail = CocktailSummaries[0];
     }
@@ -63,54 +63,38 @@ public partial class EditCocktailsViewModel(
     private async Task AddNewCocktailAsync(string name, IList<CocktailIngredientSummary> ingredients,
         string instructions)
     {
-        var capitalizedName = name.ToTitleCase();
+        try
+        {
+            var newId = await cocktailService.AddCocktailAsync(name, ingredients, instructions);
+            var newSummary = await cocktailService.GetSummaryAsync(newId);
 
-        var newId = await cocktailService.AddCocktailAsync(capitalizedName, ingredients, instructions);
-        var newSummary = new CocktailEditSummary(newId, capitalizedName, false);
-
-        CocktailEditItemViewModel = null;
-        CocktailSummaries.InsertIntoSorted(newSummary, CocktailEditSummary.NameComparer);
-        SelectedCocktail = newSummary;
+            CocktailEditItemViewModel = null;
+            CocktailSummaries.InsertIntoSorted(newSummary, CocktailEditSummary.NameComparer);
+            SelectedCocktail = newSummary;
+        }
+        catch (Exception e)
+        {
+            await dialogService.ShowInformationDialogAsync("Failed to add new cocktail", e.Message);
+        }
     }
 
     private async Task EditCocktailAsync(int id, string name, IList<CocktailIngredientSummary> ingredients,
         string instructions)
     {
-        var result = await dialogService.ShowChoiceDialogAsync("Edit existing cocktail",
-            "Are you sure you want to edit existing cocktail?", "Edit existing", "Add as new", "Cancel");
-
-        var capitalizedName = name.ToTitleCase();
-
-        switch (result)
+        try
         {
-            case ContentDialogResult.None:
-                return;
-            case ContentDialogResult.Primary:
-                await cocktailService.EditCocktailAsync(id, capitalizedName, ingredients, instructions);
+            await cocktailService.EditCocktailAsync(id, name, ingredients, instructions);
 
-                var oldSummary = CocktailSummaries.First(summary => summary.Id == id);
-                var newSummary = new CocktailEditSummary(id, capitalizedName, oldSummary.IsFavorite);
+            var oldSummary = CocktailSummaries.First(summary => summary.Id == id);
+            var newSummary = await cocktailService.GetSummaryAsync(id);
 
-                CocktailEditItemViewModel = null;
-                CocktailSummaries[CocktailSummaries.IndexOf(oldSummary)] = newSummary;
-                SelectedCocktail = newSummary;
-                break;
-            case ContentDialogResult.Secondary:
-                await AddNewCocktailAsync(name, ingredients, instructions);
-                break;
+            CocktailEditItemViewModel = null;
+            CocktailSummaries[CocktailSummaries.IndexOf(oldSummary)] = newSummary;
+            SelectedCocktail = newSummary;
         }
-    }
-
-    private void OnUndoChangesClicked(int? cocktailId)
-    {
-        _ = UndoChangesAsync(cocktailId);
-    }
-
-    private async Task UndoChangesAsync(int? cocktailId)
-    {
-        if (await GetConfirmationAsync())
+        catch (Exception e)
         {
-            await LoadCocktailFormAsync(cocktailId);
+            await dialogService.ShowInformationDialogAsync("Failed to edit cocktail", e.Message);
         }
     }
 
@@ -132,21 +116,28 @@ public partial class EditCocktailsViewModel(
     private async Task ChangeSelectedCocktailAsync(int? id)
     {
         _isBusy = true;
-        if (await GetConfirmationAsync())
+        try
         {
-            await LoadCocktailFormAsync(id);
+            if (await GetConfirmationAsync())
+            {
+                await LoadCocktailFormAsync(id);
+                return;
+            }
+
+            if (_lastSelectedCocktail is not null)
+            {
+                SelectedCocktail = _lastSelectedCocktail;
+                _lastSelectedCocktail = null;
+            }
+        }
+        catch (Exception e)
+        {
+            await dialogService.ShowInformationDialogAsync("Failed to switch cocktails", e.Message);
+        }
+        finally
+        {
             _isBusy = false;
-            return;
         }
-
-        if (_lastSelectedCocktail is null)
-        {
-            return;
-        }
-
-        SelectedCocktail = _lastSelectedCocktail;
-        _lastSelectedCocktail = null;
-        _isBusy = false;
     }
 
     private async Task<bool> GetConfirmationAsync()
@@ -164,18 +155,23 @@ public partial class EditCocktailsViewModel(
 
     private async Task LoadCocktailFormAsync(int? cocktailId)
     {
-        CocktailEditItemViewModel?.SaveCocktailClicked -= OnSaveCocktailClicked;
-        CocktailEditItemViewModel?.OnUndoChangesClicked -= OnUndoChangesClicked;
-        CocktailEditItemViewModel?.OnDeleteCocktailClicked -= OnDeleteCocktailClicked;
+        try
+        {
+            CocktailEditItemViewModel?.SaveCocktailClicked -= OnSaveCocktailClicked;
+            CocktailEditItemViewModel?.OnDeleteCocktailClicked -= OnDeleteCocktailClicked;
 
-        var cocktail = cocktailId is not null
-            ? await cocktailService.GetWithIngredientsAsync(cocktailId.Value)
-            : null;
+            var cocktail = cocktailId is not null
+                ? await cocktailService.GetWithIngredientsAsync(cocktailId.Value)
+                : null;
 
-        CocktailEditItemViewModel = new CocktailEditItemViewModel(_ingredientTypeNames, cocktail);
-        CocktailEditItemViewModel.SaveCocktailClicked += OnSaveCocktailClicked;
-        CocktailEditItemViewModel.OnUndoChangesClicked += OnUndoChangesClicked;
-        CocktailEditItemViewModel.OnDeleteCocktailClicked += OnDeleteCocktailClicked;
+            CocktailEditItemViewModel = new CocktailEditItemViewModel(_ingredientTypeNames, cocktail);
+            CocktailEditItemViewModel.SaveCocktailClicked += OnSaveCocktailClicked;
+            CocktailEditItemViewModel.OnDeleteCocktailClicked += OnDeleteCocktailClicked;
+        }
+        catch (Exception e)
+        {
+            await dialogService.ShowInformationDialogAsync("Failed to load cocktail", e.Message);
+        }
     }
 
     private void OnDeleteCocktailClicked(int cocktailId, string cocktailName)
@@ -185,22 +181,27 @@ public partial class EditCocktailsViewModel(
 
     private async Task DeleteCocktailAsync(int cocktailId, string cocktailName)
     {
-        var message = $"Are you sure you want to delete cocktail '{cocktailName}'?";
-
-        var result = await dialogService.ShowConfirmationDialogAsync("Delete cocktail", message,
-            "Delete", "Cancel");
-
-        if (result != ContentDialogResult.Primary)
+        try
         {
-            return;
+            var message = $"Are you sure you want to delete cocktail '{cocktailName}'?";
+
+            var result = await dialogService.ShowConfirmationDialogAsync("Delete cocktail", message,
+                "Delete", "Cancel");
+
+            if (result != ContentDialogResult.Primary)
+            {
+                return;
+            }
+
+            await cocktailService.DeleteCocktailAsync(cocktailId);
+
+            CocktailEditItemViewModel = null;
+            CocktailSummaries.Remove(CocktailSummaries.First(cocktail => cocktail.Id == cocktailId));
+            SelectedCocktail = CocktailSummaries[0];
         }
-
-        var cocktailTask = cocktailService.DeleteCocktailAsync(cocktailId);
-
-        CocktailEditItemViewModel = null;
-        CocktailSummaries.Remove(CocktailSummaries.First(cocktail => cocktail.Id == cocktailId));
-        SelectedCocktail = CocktailSummaries[0];
-
-        await cocktailTask;
+        catch (Exception e)
+        {
+            await dialogService.ShowInformationDialogAsync("Failed to delete cocktail", e.Message);
+        }
     }
 }
