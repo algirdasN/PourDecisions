@@ -170,6 +170,11 @@ public partial class CocktailEditItemViewModel : ViewModelBase
         NameError = _errorMap.FirstOrDefault(kvp => kvp.Value.NameError is not null).Value.NameError;
     }
 
+    private void SetDirty()
+    {
+        IsDirty = true;
+    }
+
     partial void OnNameChanged(string value)
     {
         SetDirty();
@@ -178,10 +183,5 @@ public partial class CocktailEditItemViewModel : ViewModelBase
     partial void OnInstructionsChanged(string value)
     {
         SetDirty();
-    }
-
-    private void SetDirty()
-    {
-        IsDirty = true;
     }
 }

@@ -98,21 +98,6 @@ public partial class EditCocktailsViewModel(
         }
     }
 
-    partial void OnSelectedCocktailChanging(CocktailEditSummary? value)
-    {
-        _lastSelectedCocktail = SelectedCocktail;
-    }
-
-    partial void OnSelectedCocktailChanged(CocktailEditSummary? value)
-    {
-        if (_isBusy)
-        {
-            return;
-        }
-
-        _ = ChangeSelectedCocktailAsync(value?.Id);
-    }
-
     private async Task ChangeSelectedCocktailAsync(int? id)
     {
         _isBusy = true;
@@ -203,5 +188,20 @@ public partial class EditCocktailsViewModel(
         {
             await dialogService.ShowInformationDialogAsync("Failed to delete cocktail", e.Message);
         }
+    }
+
+    partial void OnSelectedCocktailChanging(CocktailEditSummary? value)
+    {
+        _lastSelectedCocktail = SelectedCocktail;
+    }
+
+    partial void OnSelectedCocktailChanged(CocktailEditSummary? value)
+    {
+        if (_isBusy)
+        {
+            return;
+        }
+
+        _ = ChangeSelectedCocktailAsync(value?.Id);
     }
 }

@@ -95,21 +95,6 @@ public partial class CocktailsViewModel(
         }
     }
 
-    partial void OnShowAvailableOnlyChanged(bool value)
-    {
-        FilterCocktails();
-    }
-
-    partial void OnShowFavoriteOnlyChanged(bool value)
-    {
-        FilterCocktails();
-    }
-
-    partial void OnSearchTextChanged(string value)
-    {
-        FilterCocktails();
-    }
-
     private void FilterCocktails()
     {
         FilteredCocktails = _allCocktails
@@ -124,5 +109,20 @@ public partial class CocktailsViewModel(
         {
             SelectedCocktail = FilteredCocktails.FirstOrDefault();
         }
+    }
+
+    partial void OnShowAvailableOnlyChanged(bool value)
+    {
+        FilterCocktails();
+    }
+
+    partial void OnShowFavoriteOnlyChanged(bool value)
+    {
+        FilterCocktails();
+    }
+
+    partial void OnSearchTextChanged(string value)
+    {
+        FilterCocktails();
     }
 }
