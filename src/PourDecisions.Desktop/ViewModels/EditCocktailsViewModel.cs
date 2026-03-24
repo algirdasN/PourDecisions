@@ -143,7 +143,7 @@ public partial class EditCocktailsViewModel(
         try
         {
             CocktailEditItemViewModel?.SaveCocktailClicked -= OnSaveCocktailClicked;
-            CocktailEditItemViewModel?.OnDeleteCocktailClicked -= OnDeleteCocktailClicked;
+            CocktailEditItemViewModel?.DeleteCocktailClicked -= OnDeleteCocktailClicked;
 
             var cocktail = cocktailId is not null
                 ? await cocktailService.GetWithIngredientsAsync(cocktailId.Value)
@@ -151,7 +151,7 @@ public partial class EditCocktailsViewModel(
 
             CocktailEditItemViewModel = new CocktailEditItemViewModel(_ingredientTypeNames, cocktail);
             CocktailEditItemViewModel.SaveCocktailClicked += OnSaveCocktailClicked;
-            CocktailEditItemViewModel.OnDeleteCocktailClicked += OnDeleteCocktailClicked;
+            CocktailEditItemViewModel.DeleteCocktailClicked += OnDeleteCocktailClicked;
         }
         catch (Exception e)
         {

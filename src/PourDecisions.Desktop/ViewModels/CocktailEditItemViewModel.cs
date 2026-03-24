@@ -68,7 +68,7 @@ public partial class CocktailEditItemViewModel : ViewModelBase
     public string LongestAmountUnit { get; } = Enum.GetNames<AmountUnit>().MaxBy(x => x.Length)!;
 
     public event Action<int?, string, IList<CocktailIngredientSummary>, string>? SaveCocktailClicked;
-    public event Action<int, string>? OnDeleteCocktailClicked;
+    public event Action<int, string>? DeleteCocktailClicked;
 
     [RelayCommand]
     private void AddIngredient()
@@ -105,7 +105,7 @@ public partial class CocktailEditItemViewModel : ViewModelBase
             return;
         }
 
-        OnDeleteCocktailClicked?.Invoke(_id.Value, Name);
+        DeleteCocktailClicked?.Invoke(_id.Value, Name);
     }
 
     private void OnNavigationIconClicked(CocktailIngredientViewModel cocktailIngredient, bool moveDown)
@@ -117,11 +117,11 @@ public partial class CocktailEditItemViewModel : ViewModelBase
 
     private void OnDeleteClicked(CocktailIngredientViewModel cocktailIngredient)
     {
-        cocktailIngredient.OnChanged -= SetDirty;
-        cocktailIngredient.OnNavigationIconClicked -= OnNavigationIconClicked;
-        cocktailIngredient.OnDeleteClicked -= OnDeleteClicked;
-        cocktailIngredient.OnValidationChanged -= OnValidationChanged;
-        cocktailIngredient.OnDuplicateCheckNeeded -= OnDuplicateCheckNeeded;
+        cocktailIngredient.Changed -= SetDirty;
+        cocktailIngredient.NavigationIconClicked -= OnNavigationIconClicked;
+        cocktailIngredient.DeleteClicked -= OnDeleteClicked;
+        cocktailIngredient.ValidationChanged -= OnValidationChanged;
+        cocktailIngredient.DuplicateCheckNeeded -= OnDuplicateCheckNeeded;
 
         Ingredients.Remove(cocktailIngredient);
         if (Ingredients.Count == 0)
@@ -156,11 +156,11 @@ public partial class CocktailEditItemViewModel : ViewModelBase
     private CocktailIngredientViewModel CreateIngredientViewModel(CocktailIngredient? cocktailIngredient)
     {
         var vm = new CocktailIngredientViewModel(cocktailIngredient);
-        vm.OnChanged += SetDirty;
-        vm.OnNavigationIconClicked += OnNavigationIconClicked;
-        vm.OnDeleteClicked += OnDeleteClicked;
-        vm.OnValidationChanged += OnValidationChanged;
-        vm.OnDuplicateCheckNeeded += OnDuplicateCheckNeeded;
+        vm.Changed += SetDirty;
+        vm.NavigationIconClicked += OnNavigationIconClicked;
+        vm.DeleteClicked += OnDeleteClicked;
+        vm.ValidationChanged += OnValidationChanged;
+        vm.DuplicateCheckNeeded += OnDuplicateCheckNeeded;
         return vm;
     }
 

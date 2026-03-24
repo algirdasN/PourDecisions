@@ -45,11 +45,11 @@ public partial class CocktailIngredientViewModel : ViewModelBase
 
     public string NavigationIcon => IsFirst ? "﹀" : "︿";
 
-    public event Action? OnChanged;
-    public event Action<CocktailIngredientViewModel, bool>? OnNavigationIconClicked;
-    public event Action<CocktailIngredientViewModel>? OnDeleteClicked;
-    public event Action<object, string?, string?>? OnValidationChanged;
-    public event Action? OnDuplicateCheckNeeded;
+    public event Action? Changed;
+    public event Action<CocktailIngredientViewModel, bool>? NavigationIconClicked;
+    public event Action<CocktailIngredientViewModel>? DeleteClicked;
+    public event Action<object, string?, string?>? ValidationChanged;
+    public event Action? DuplicateCheckNeeded;
 
     public CocktailIngredientSummary GetIngredientData()
     {
@@ -66,16 +66,16 @@ public partial class CocktailIngredientViewModel : ViewModelBase
     [RelayCommand]
     private void Navigate()
     {
-        OnChanged?.Invoke();
-        OnNavigationIconClicked?.Invoke(this, IsFirst);
+        Changed?.Invoke();
+        NavigationIconClicked?.Invoke(this, IsFirst);
     }
 
     [RelayCommand]
     private void Delete()
     {
-        OnChanged?.Invoke();
-        OnDeleteClicked?.Invoke(this);
-        OnDuplicateCheckNeeded?.Invoke();
+        Changed?.Invoke();
+        DeleteClicked?.Invoke(this);
+        DuplicateCheckNeeded?.Invoke();
     }
 
     private void OnErrorsChanged(object? sender, DataErrorsChangedEventArgs e)
@@ -97,23 +97,23 @@ public partial class CocktailIngredientViewModel : ViewModelBase
             var result => result.ErrorMessage ?? "Unknown error"
         };
 
-        OnValidationChanged?.Invoke(sender, amountError, nameError);
+        ValidationChanged?.Invoke(sender, amountError, nameError);
     }
 
     partial void OnAmountTextChanged(string value)
     {
-        OnChanged?.Invoke();
+        Changed?.Invoke();
     }
 
     partial void OnUnitChanged(AmountUnit value)
     {
-        OnChanged?.Invoke();
+        Changed?.Invoke();
     }
 
     partial void OnNameChanged(string value)
     {
-        OnChanged?.Invoke();
-        OnDuplicateCheckNeeded?.Invoke();
+        Changed?.Invoke();
+        DuplicateCheckNeeded?.Invoke();
     }
 
     partial void OnHasDuplicateNameChanged(bool value)
