@@ -111,8 +111,7 @@ Lives in `PourDecisions.Application/AvailabilityEngine/`.
 
 **`AvailabilityResult`**
 - `Status` — `AvailabilityStatus` enum (`Available` / `Unavailable`)
-- `MissingRequired` — `List<CocktailIngredient>` of ingredients not available
-- `MissingRequiredCount` — derived convenience property; used for sort order in the browser
+- `MissingIngredients` — `List<CocktailIngredient>` of ingredients not available
 - Untracked types are invisible — they never appear in the missing list
 
 **`AvailabilityCalculator`** (pure static class, no DI)
@@ -139,7 +138,7 @@ Lives in `PourDecisions.Application/Services/`. Registered as `Scoped`.
 - `GetAllWithIngredientsAsync()` — loads all cocktails with `.Include(c => c.CocktailIngredients.OrderBy(ci => ci.SortOrder)).ThenInclude(ci => ci.Type)`. Full graph required — entities are materialised before passing to the Desktop layer.
 - `GetAllSummariesAsync()` — thin projection (`CocktailEditSummary` record: `Id`, `Name`, `IsFavorite`). No includes. Used by the Edit Cocktails list — does not load availability data.
 - `AddCocktailAsync(string name, IList<CocktailIngredientSummary> ingredientSummaries, string instructions)` — owns entity construction via `BuildCocktailIngredients`. Returns the new cocktail's ID.
-- `EditCocktailAsync(int id, string name, IList<CocktailIngredientSummary> ingredientSummaries, string instructions)` — delete-all-and-reinsert for `CocktailIngredient` rows. Does not diff the old list — clears via `cocktail.CocktailIngredients.Clear()` then reinserts. See note on orphan deletion below.
+- `EditCocktailAsync(int id, string name, IList<CocktailIngredientSummary> ingredientSummaries, string instructions)` — delete-all-and-reinsert for `CocktailIngredient` rows. Does not diff the old list — replaces the `CocktailIngredients` collection.
 - `SetFavoriteAsync(int cocktailId, bool isFavorite)` — single entity fetch + `SaveChangesAsync`.
 - `DeleteCocktailAsync(int cocktailId)` — entity fetch + `Remove` + `SaveChangesAsync`.
 
@@ -154,22 +153,21 @@ Lives in `PourDecisions.Application/Services/`. Registered as `Scoped`.
 - `AddBottleAsync(string typeName, string bottleName, int volume, FillLevel fillLevel)` — owns all entity construction. Looks up `IngredientType` by name (case-insensitive); creates it with `IsTracked = true` if not found; sets `IsTracked = true` on existing types. Normalizes type name to title case. Returns the created `Bottle` with `Type` populated.
 - `GetBottlesWithTypeAsync()` — loads all bottles with `.Include(b => b.Type)`.
 - `GetBottlesOfTypeAsync(int typeId)` — loads bottles filtered by type, used for surgical list refresh after add/delete.
-- `GetTrackedIngredientTypeNamesAsync()` — loads all tracked ingredient type names, ordered alphabetically. Used for autocomplete in the add bottle form.
 - `UpdateBottleFillLevelAsync(int bottleId, FillLevel newFill)` — single entity fetch + save.
-- `DeleteBottleAsync(int bottleId)` — `ExecuteDeleteAsync` (no entity materialisation needed).
+- `DeleteBottleAsync(int bottleId)` — entity fetch + `Remove` + `SaveChangesAsync`.
 
 ### `IIngredientService` / `IngredientService`
 
 Lives in `PourDecisions.Application/Services/`. Registered as `Scoped`.
 
-- `GetIngredientTypeByNameAsync(string name)` — case-insensitive lookup. Used by the cocktail recipe editor where type lookup is needed without bottle creation.
 - `GetIngredientTypeNamesAsync()` — returns all ingredient type names ordered alphabetically. Used for autocomplete in the cocktail ingredient row form.
+- `GetTrackedIngredientTypeNamesAsync()` — loads all tracked ingredient type names, ordered alphabetically. Used for autocomplete in the add bottle form.
 
 ### Shared Utilities
 
 **`ListExtensions`** lives in `PourDecisions.Shared/Extensions/` and provides:
 
-- `InsertIntoSorted<T>(this ObservableCollection<T> collection, T item, IComparer<T> comparer)` — binary search insert maintaining sorted order without triggering full list rebuild. Used in `InventoryViewModel` to preserve accordion expanded/collapsed state after adding a new type.
+- `InsertIntoSorted<T>(this IList<T> list, T item, Comparer<T>? comparer = null)` — binary search insert maintaining sorted order. Used in `InventoryViewModel` and `EditCocktailsViewModel` to maintain sorted lists after additions.
 
 **Do not use `DbContext` directly from ViewModels.** All data access goes through Application layer services. The `Desktop` layer depends on `Application`; it does not reference `Core` directly for data access.
 
@@ -279,7 +277,7 @@ Each card shows three columns:
 - Name: Cocktail name (center column, left-aligned)
 - Availability badge: `AvailabilityLabel` + color coding (right-aligned)
   - `"✔️ available"` in `ForestGreen` if available
-  - `"❌ missing N"` in `OrangeRed` if unavailable (N = missing required count)
+  - `"❌ missing N"` in `OrangeRed` if unavailable (N = missing ingredients count)
 
 **Detail Panel (Right Column):**
 
@@ -287,29 +285,45 @@ Displays the selected cocktail's detail view. Auto-selects the first item after 
 
 ### Cocktail Browser ViewModel Pattern
 
-**`CocktailsSummaryViewModel`** (pure display model)
+**`CocktailSummaryViewModel`** (pure display model)
 
 Wraps a single cocktail entity plus its availability result. **No infrastructure dependencies** — never inject services into this ViewModel.
 
 ```csharp
-public partial class CocktailsSummaryViewModel(Cocktail cocktail, AvailabilityResult availabilityResult) : ViewModelBase
+public partial class CocktailSummaryViewModel(Cocktail cocktail, AvailabilityResult availabilityResult) : ViewModelBase
 {
-    [ObservableProperty] 
-    [NotifyPropertyChangedFor(nameof(FavoriteLabel))]
-    private bool _isFavorite;
-    
-    public string Name { get; }
-    public string Instructions { get; }
-    public AvailabilityStatus AvailabilityStatus { get; }
-    public string AvailabilityLabel { get; }  // Computed: "✔️ available" or "❌ missing N"
-    public string FavoriteLabel => IsFavorite ? "⭐️ " : string.Empty;
-    public List<IngredientAvailabilityInfo> Ingredients { get; }  // See Models section below
-    
+    private readonly int _id = cocktail.Id;
+
+    [ObservableProperty]
+    private bool _isFavorite = cocktail.IsFavorite;
+
+    public string Name { get; } = cocktail.Name;
+    public string Instructions { get; } = cocktail.Instructions;
+
+    public List<IngredientAvailabilityInfo> Ingredients { get; } = cocktail.CocktailIngredients
+        .Select(ci => new IngredientAvailabilityInfo(IngredientDisplayText(ci),
+            availabilityResult.MissingIngredients.Any(missing => missing.TypeId == ci.TypeId)))
+        .ToList();
+
+    public AvailabilityStatus AvailabilityStatus { get; } = availabilityResult.Status;
+
+    public string AvailabilityLabel { get; } = availabilityResult.Status switch
+    {
+        AvailabilityStatus.Available => "✔️ available",
+        AvailabilityStatus.Unavailable => $"❌ missing {availabilityResult.MissingIngredients.Count}",
+        _ => throw new ArgumentOutOfRangeException()
+    };
+
     public event Action<int, bool>? FavoriteToggled;
-    
+
     partial void OnIsFavoriteChanged(bool value)
     {
         FavoriteToggled?.Invoke(_id, value);
+    }
+
+    private static string IngredientDisplayText(CocktailIngredient ci)
+    {
+        return $"{ci.AmountValue} {ci.AmountUnit.ToString().ToLowerInvariant()} of {ci.Type.Name.ToLowerInvariant()}";
     }
 }
 ```
@@ -317,8 +331,7 @@ public partial class CocktailsSummaryViewModel(Cocktail cocktail, AvailabilityRe
 Display properties:
 - `Name`, `Instructions`, `AvailabilityStatus` — direct from entity/result
 - `AvailabilityLabel` — computed from `AvailabilityStatus` with emoji and missing count
-- `FavoriteLabel` — derived from `IsFavorite` boolean; triggers UI update via `[NotifyPropertyChangedFor]`
-- `Ingredients` — `List<IngredientAvailabilityInfo>` mapped from `CocktailIngredients` with missing flag set via `availabilityResult.MissingRequired` lookup
+- `Ingredients` — `List<IngredientAvailabilityInfo>` mapped from `CocktailIngredients` with missing flag set via `availabilityResult.MissingIngredients` lookup
 
 Event-driven favorite toggle:
 - `IsFavorite` is a mutable `[ObservableProperty]`
@@ -330,20 +343,19 @@ Event-driven favorite toggle:
 Implements `IAsyncLoadable` for async initialization on navigation.
 
 ```csharp
-public partial class CocktailsViewModel(ICocktailService cocktailService, IAvailabilityService availabilityService)
+public partial class CocktailsViewModel(
+    IAvailabilityService availabilityService,
+    ICocktailService cocktailService,
+    IDialogService dialogService)
     : ViewModelBase, IAsyncLoadable
 {
-    private readonly List<CocktailsSummaryViewModel> _allCocktails = [];
+    private List<CocktailSummaryViewModel> _allCocktails = [];
     
-    [ObservableProperty] private ObservableCollection<CocktailsSummaryViewModel> _filteredCocktails;
+    [ObservableProperty] private ObservableCollection<CocktailSummaryViewModel> _filteredCocktails;
     [ObservableProperty] private string _searchText;
-    [ObservableProperty] private CocktailsSummaryViewModel? _selectedCocktail;
+    [ObservableProperty] private CocktailSummaryViewModel? _selectedCocktail;
     [ObservableProperty] private bool _showAvailableOnly;
     [ObservableProperty] private bool _showFavoriteOnly;
-    
-    public bool HasResults => FilteredCocktails.Count > 0;
-    public bool ShowClearButton => _allCocktails.Count > 0 && FilteredCocktails.Count == 0;
-    public string EmptyStateMessage => _allCocktails.Count == 0 ? "..." : "...";
 }
 ```
 
@@ -404,7 +416,7 @@ View features:
 public record IngredientAvailabilityInfo(string DisplayText, bool IsMissing);
 ```
 
-Lightweight struct mapping ingredients to display + missing flag. Used in detail view to show which ingredients are unavailable. Mapped from `CocktailIngredients` with `IsMissing` set by checking if the ingredient type appears in `availabilityResult.MissingRequired`.
+Lightweight struct mapping ingredients to display + missing flag. Used in detail view to show which ingredients are unavailable. Mapped from `CocktailIngredients` with `IsMissing` set by checking if the ingredient type appears in `availabilityResult.MissingIngredients`.
 
 Example display: `"60 ml of Dry Gin"` or `"1 piece of Lime"`
 
@@ -537,7 +549,7 @@ EditCocktailsView (UserControl)
 
 **`CocktailIngredientViewModel`** (ingredient row, no infrastructure deps)
 - Fields: `AmountText` (string, validated as positive integer), `Unit` (AmountUnit enum), `Name` (string, validated)
-- Up/Down navigation via single `NavigateCommand` — passes `IsFirst` as a `bool` through `OnNavigationIconClicked` event so parent knows direction; `NavigationIcon` (`︿`/`﹀`) derived from `IsFirst`
+- Up/Down navigation via single `NavigateCommand` — passes `moveDown` as a `bool` through `OnNavigationIconClicked` event so parent knows direction; `NavigationIcon` (`︿`/`﹀`) derived from `IsFirst`
 - `IsFirst` maintained by parent on every `CollectionChanged` — parent iterates and sets `Ingredients[i].IsFirst = i == 0`
 - Events: `OnChanged`, `OnNavigationIconClicked(vm, moveDown)`, `OnDeleteClicked`, `OnValidationChanged`, `OnDuplicateCheckNeeded`
 - `TriggerValidation()` — public wrapper exposing `protected ValidateAllProperties()` for parent to call at save time
@@ -578,6 +590,7 @@ Live in `PourDecisions.Desktop/Converters/`. Registered as resources in `App.axa
 
 Current converters:
 - `AvailabilityStatusToColorConverter` — maps `AvailabilityStatus` enum to `IBrush`. Returns `ForestGreen` for `Available`, `OrangeRed` for `Unavailable`. Used in the cocktail browser list to color-code availability badges and in the detail ingredients list to highlight missing items. Returns `null` for unrecognised values (Avalonia falls back to default brush gracefully).
+- `BoolToFavoriteLabelConverter` — maps `bool` to string (`"⭐️ "` for `true`, empty for `false`). Used in the cocktail browser list and edit list.
 
 ### Avalonia Binding Notes
 

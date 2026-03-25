@@ -112,7 +112,7 @@ Detail view is the right panel of the master/detail layout implemented in PD-003
 - Lists only tracked `IngredientType` records that have at least one bottle
 - Each accordion header shows: type name + bottle count e.g. *"Dry Gin (2)"* — collapsed by default
 - Expanding reveals bottles; each bottle shows: name, volume, fill level display
-- Clicking fill level cycles `Full → ThreeQuarters → Half → Quarter → AlmostEmpty → Full`, persisted immediately (fire-and-forget)
+- Clicking fill level cycles `Full → Half → Quarter → Full`, persisted immediately (fire-and-forget)
 - Delete bottle: confirmation prompt → hard delete. If last bottle of a type, that type disappears from the list — type remains tracked
 - Global "Add bottle" button at top of page
 - Per-type "Add bottle" button in each accordion header — pre-fills ingredient type, expands accordion
