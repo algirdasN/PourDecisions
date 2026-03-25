@@ -15,30 +15,13 @@ internal static class AvailabilityCalculator
     /// <returns>An <see cref="AvailabilityResult"/> containing the availability status and lists of missing ingredients.</returns>
     public static AvailabilityResult CalculateCocktailAvailability(Cocktail cocktail, ISet<int> availableTypeIds)
     {
-        var missingRequired = new List<CocktailIngredient>();
-        var missingOptional = new List<CocktailIngredient>();
+        var missingIngredients = cocktail.CocktailIngredients
+            .Where(ingredient => !availableTypeIds.Contains(ingredient.TypeId)).ToList();
 
-        foreach (var ingredient in cocktail.CocktailIngredients)
-        {
-            if (availableTypeIds.Contains(ingredient.TypeId))
-            {
-                continue;
-            }
-
-            if (ingredient.IsOptional)
-            {
-                missingOptional.Add(ingredient);
-            }
-            else
-            {
-                missingRequired.Add(ingredient);
-            }
-        }
-
-        var status = missingRequired.Count == 0
+        var status = missingIngredients.Count == 0
             ? AvailabilityStatus.Available
             : AvailabilityStatus.Unavailable;
 
-        return new AvailabilityResult(status, missingRequired, missingOptional);
+        return new AvailabilityResult(status, missingIngredients);
     }
 }

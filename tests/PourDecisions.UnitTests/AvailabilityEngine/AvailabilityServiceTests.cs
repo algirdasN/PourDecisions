@@ -42,12 +42,12 @@ public class AvailabilityServiceTests
             {
                 new()
                 {
-                    Id = 1, TypeId = 1, AmountValue = 60, AmountUnit = AmountUnit.Ml, IsOptional = false,
+                    Id = 1, TypeId = 1, AmountValue = 60, AmountUnit = AmountUnit.Ml,
                     CocktailId = 1, Type = ginType
                 },
                 new()
                 {
-                    Id = 2, TypeId = 2, AmountValue = 30, AmountUnit = AmountUnit.Ml, IsOptional = false,
+                    Id = 2, TypeId = 2, AmountValue = 30, AmountUnit = AmountUnit.Ml,
                     CocktailId = 1, Type = vermouthType
                 }
             }
@@ -94,12 +94,12 @@ public class AvailabilityServiceTests
             {
                 new()
                 {
-                    Id = 1, TypeId = 1, AmountValue = 60, AmountUnit = AmountUnit.Ml, IsOptional = false,
+                    Id = 1, TypeId = 1, AmountValue = 60, AmountUnit = AmountUnit.Ml,
                     CocktailId = 1, Type = ginType
                 },
                 new()
                 {
-                    Id = 2, TypeId = 2, AmountValue = 1, AmountUnit = AmountUnit.Piece, IsOptional = false,
+                    Id = 2, TypeId = 2, AmountValue = 1, AmountUnit = AmountUnit.Piece,
                     CocktailId = 1, Type = garnishType
                 }
             }
@@ -122,7 +122,7 @@ public class AvailabilityServiceTests
         // Assert - Untracked ingredient (Lemon) should be treated as available
         Assert.True(result.ContainsKey(1));
         Assert.Equal(AvailabilityStatus.Available, result[1].Status);
-        Assert.Empty(result[1].MissingRequired);
+        Assert.Empty(result[1].MissingIngredients);
     }
 
     [Fact]
@@ -144,12 +144,12 @@ public class AvailabilityServiceTests
             {
                 new()
                 {
-                    Id = 1, TypeId = 1, AmountValue = 60, AmountUnit = AmountUnit.Ml, IsOptional = false,
+                    Id = 1, TypeId = 1, AmountValue = 60, AmountUnit = AmountUnit.Ml,
                     CocktailId = 1, Type = ginType
                 },
                 new()
                 {
-                    Id = 2, TypeId = 2, AmountValue = 30, AmountUnit = AmountUnit.Ml, IsOptional = false,
+                    Id = 2, TypeId = 2, AmountValue = 30, AmountUnit = AmountUnit.Ml,
                     CocktailId = 1, Type = vermouthType
                 }
             }
@@ -172,61 +172,7 @@ public class AvailabilityServiceTests
         // Assert - No bottles for either ingredient
         Assert.True(result.ContainsKey(1));
         Assert.Equal(AvailabilityStatus.Unavailable, result[1].Status);
-        Assert.Equal(2, result[1].MissingRequired.Count);
-    }
-
-    [Fact]
-    public async Task GetCocktailAvailabilityAsync_OptionalIngredientMissing_StillAvailable()
-    {
-        // Arrange
-        var options = CreateInMemoryOptions(
-            nameof(GetCocktailAvailabilityAsync_OptionalIngredientMissing_StillAvailable));
-
-        var ginType = new IngredientType { Id = 1, Name = "Gin", IsTracked = true };
-        var bitterType = new IngredientType { Id = 2, Name = "Bitters", IsTracked = true };
-
-        var bottle = new Bottle { Id = 1, FillLevel = FillLevel.Half, Name = "Tanqueray", TypeId = 1, Type = ginType };
-        ginType.Bottles = new List<Bottle> { bottle };
-
-        var cocktail = new Cocktail
-        {
-            Id = 1,
-            Name = "Martini",
-            Instructions = "Stir",
-            CocktailIngredients = new List<CocktailIngredient>
-            {
-                new()
-                {
-                    Id = 1, TypeId = 1, AmountValue = 60, AmountUnit = AmountUnit.Ml, IsOptional = false,
-                    CocktailId = 1, Type = ginType
-                },
-                new()
-                {
-                    Id = 2, TypeId = 2, AmountValue = 2, AmountUnit = AmountUnit.Dash, IsOptional = true,
-                    CocktailId = 1, Type = bitterType
-                }
-            }
-        };
-
-        await using (var context = new CocktailDbContext(options))
-        {
-            await context.AddRangeAsync(ginType, bitterType, bottle, cocktail);
-            await context.SaveChangesAsync();
-        }
-
-        // Act
-        Dictionary<int, AvailabilityResult> result;
-        await using (var context = new CocktailDbContext(options))
-        {
-            var service = new AvailabilityService(context);
-            result = await service.GetCocktailAvailabilityAsync();
-        }
-
-        // Assert
-        Assert.True(result.ContainsKey(1));
-        Assert.Equal(AvailabilityStatus.Available, result[1].Status);
-        Assert.Empty(result[1].MissingRequired);
-        Assert.Single(result[1].MissingOptional);
+        Assert.Equal(2, result[1].MissingIngredients.Count);
     }
 
     [Fact]
@@ -251,7 +197,7 @@ public class AvailabilityServiceTests
             {
                 new()
                 {
-                    Id = 1, TypeId = 1, AmountValue = 60, AmountUnit = AmountUnit.Ml, IsOptional = false,
+                    Id = 1, TypeId = 1, AmountValue = 60, AmountUnit = AmountUnit.Ml,
                     CocktailId = 1, Type = ginType
                 }
             }
@@ -266,7 +212,7 @@ public class AvailabilityServiceTests
             {
                 new()
                 {
-                    Id = 2, TypeId = 2, AmountValue = 60, AmountUnit = AmountUnit.Ml, IsOptional = false,
+                    Id = 2, TypeId = 2, AmountValue = 60, AmountUnit = AmountUnit.Ml,
                     CocktailId = 2, Type = rumType
                 }
             }

@@ -62,7 +62,9 @@ public class ListExtensionsTests
         Assert.Equal(3, list[2]);
         // Everything else stays sorted.
         for (var i = 1; i < list.Count; i++)
+        {
             Assert.True(list[i] >= list[i - 1]);
+        }
     }
 
     [Fact]
@@ -140,7 +142,9 @@ public class ListExtensionsTests
 
         Assert.Equal(5, list.Count);
         for (var i = 1; i < list.Count; i++)
+        {
             Assert.True(list[i] >= list[i - 1]);
+        }
     }
 
     [Fact]
@@ -184,5 +188,50 @@ public class ListExtensionsTests
         observableList.InsertIntoSorted(item);
 
         Assert.Equal(concreteList, observableList);
+    }
+
+    // -------------------------------------------------------------------------
+    // ToObservableCollection tests
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void ToObservableCollection_EmptyEnumerable_ReturnsEmptyCollection()
+    {
+        var enumerable = Enumerable.Empty<int>();
+
+        var result = enumerable.ToObservableCollection();
+
+        Assert.Empty(result);
+        Assert.IsType<ObservableCollection<int>>(result);
+    }
+
+    [Fact]
+    public void ToObservableCollection_NonEmptyEnumerable_ReturnsCollectionWithSameElements()
+    {
+        var enumerable = new[] { 1, 2, 3 };
+
+        var result = enumerable.ToObservableCollection();
+
+        Assert.Equal([1, 2, 3], result);
+        Assert.IsType<ObservableCollection<int>>(result);
+    }
+
+    [Fact]
+    public void ToObservableCollection_NullEnumerable_ThrowsArgumentNullException()
+    {
+        IEnumerable<int> enumerable = null!;
+
+        Assert.Throws<ArgumentNullException>(() => enumerable.ToObservableCollection());
+    }
+
+    [Fact]
+    public void ToObservableCollection_FromObservableCollection_ReturnsNewInstance()
+    {
+        var original = new ObservableCollection<int> { 1, 2 };
+
+        var result = original.ToObservableCollection();
+
+        Assert.NotSame(original, result);
+        Assert.Equal(original, result);
     }
 }

@@ -23,12 +23,12 @@ public partial class AddBottleViewModel(IEnumerable<string> ingredientTypeNames,
     private string _ingredientTypeName = typeName;
 
     [ObservableProperty]
+    private ObservableCollection<string> _ingredientTypeNames = new(ingredientTypeNames);
+
+    [ObservableProperty]
     [NotifyDataErrorInfo]
     [CustomValidation(typeof(AddBottleViewModel), nameof(ValidateVolume))]
     private string _volumeText = string.Empty;
-
-    [ObservableProperty]
-    private ObservableCollection<string> _ingredientTypeNames = new(ingredientTypeNames);
 
     public FillLevel[] FillLevels { get; } = Enum.GetValues<FillLevel>();
 
@@ -63,7 +63,7 @@ public partial class AddBottleViewModel(IEnumerable<string> ingredientTypeNames,
     {
         if (!int.TryParse(value, out var volume) || volume <= 0)
         {
-            return new ValidationResult("Volume must be a positive number");
+            return new ValidationResult("Volume must be a positive integer");
         }
 
         return ValidationResult.Success;

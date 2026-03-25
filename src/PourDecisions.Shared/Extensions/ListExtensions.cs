@@ -1,3 +1,5 @@
+using System.Collections.ObjectModel;
+
 namespace PourDecisions.Shared.Extensions;
 
 /// <summary>
@@ -54,6 +56,19 @@ public static class ListExtensions
             }
 
             list.Insert(index, item);
+        }
+    }
+
+    extension<T>(IEnumerable<T> enumerable)
+    {
+        /// <summary>
+        /// Converts an <see cref="IEnumerable{T}"/> to an <see cref="ObservableCollection{T}"/>.
+        /// </summary>
+        /// <typeparam name="T">The type of elements in the enumerable.</typeparam>
+        /// <returns>A new <see cref="ObservableCollection{T}"/> containing the elements from the enumerable.</returns>
+        public ObservableCollection<T> ToObservableCollection()
+        {
+            return new ObservableCollection<T>(enumerable);
         }
     }
 }

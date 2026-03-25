@@ -21,13 +21,11 @@ public class CocktailSummaryViewModelTests
             {
                 new()
                 {
-                    Type = new IngredientType { Name = "Gin" }, AmountValue = 60, AmountUnit = AmountUnit.Ml,
-                    IsOptional = false
+                    Type = new IngredientType { Name = "Gin" }, AmountValue = 60, AmountUnit = AmountUnit.Ml
                 }
             }
         };
-        var availability = new AvailabilityResult(AvailabilityStatus.Available, new List<CocktailIngredient>(),
-            new List<CocktailIngredient>());
+        var availability = new AvailabilityResult(AvailabilityStatus.Available, new List<CocktailIngredient>());
 
         // Act
         var viewModel = new CocktailSummaryViewModel(cocktail, availability);
@@ -47,7 +45,7 @@ public class CocktailSummaryViewModelTests
         var cocktail = new Cocktail { Id = 1, CocktailIngredients = new List<CocktailIngredient>() };
         var missingIngredient = new CocktailIngredient { TypeId = 1 };
         var availability = new AvailabilityResult(AvailabilityStatus.Unavailable,
-            new List<CocktailIngredient> { missingIngredient }, new List<CocktailIngredient>());
+            new List<CocktailIngredient> { missingIngredient });
 
         // Act
         var viewModel = new CocktailSummaryViewModel(cocktail, availability);
@@ -63,8 +61,7 @@ public class CocktailSummaryViewModelTests
         // Arrange
         var cocktail = new Cocktail
             { Id = 42, IsFavorite = false, CocktailIngredients = new List<CocktailIngredient>() };
-        var availability = new AvailabilityResult(AvailabilityStatus.Available, new List<CocktailIngredient>(),
-            new List<CocktailIngredient>());
+        var availability = new AvailabilityResult(AvailabilityStatus.Available, new List<CocktailIngredient>());
         var viewModel = new CocktailSummaryViewModel(cocktail, availability);
         int? invokedId = null;
         bool? invokedFavorite = null;
@@ -92,18 +89,15 @@ public class CocktailSummaryViewModelTests
             {
                 new()
                 {
-                    Type = new IngredientType { Name = "Gin" }, AmountValue = 60, AmountUnit = AmountUnit.Ml,
-                    IsOptional = false
+                    Type = new IngredientType { Name = "Gin" }, AmountValue = 60, AmountUnit = AmountUnit.Ml
                 },
                 new()
                 {
-                    Type = new IngredientType { Name = "Lemon" }, AmountValue = 1, AmountUnit = AmountUnit.Piece,
-                    IsOptional = true
+                    Type = new IngredientType { Name = "Lemon" }, AmountValue = 1, AmountUnit = AmountUnit.Piece
                 }
             }
         };
-        var availability = new AvailabilityResult(AvailabilityStatus.Available, new List<CocktailIngredient>(),
-            new List<CocktailIngredient>());
+        var availability = new AvailabilityResult(AvailabilityStatus.Available, new List<CocktailIngredient>());
 
         // Act
         var viewModel = new CocktailSummaryViewModel(cocktail, availability);
@@ -112,7 +106,7 @@ public class CocktailSummaryViewModelTests
         Assert.Equal(2, viewModel.Ingredients.Count);
         Assert.Equal("60 ml of gin", viewModel.Ingredients[0].DisplayText);
         Assert.False(viewModel.Ingredients[0].IsMissing);
-        Assert.Equal("1 piece of lemon (optional)", viewModel.Ingredients[1].DisplayText);
+        Assert.Equal("1 piece of lemon", viewModel.Ingredients[1].DisplayText);
         Assert.False(viewModel.Ingredients[1].IsMissing);
     }
 
@@ -122,21 +116,18 @@ public class CocktailSummaryViewModelTests
         // Arrange
         var ci1 = new CocktailIngredient
         {
-            TypeId = 1, Type = new IngredientType { Name = "Gin" }, AmountValue = 60, AmountUnit = AmountUnit.Ml,
-            IsOptional = false
+            TypeId = 1, Type = new IngredientType { Name = "Gin" }, AmountValue = 60, AmountUnit = AmountUnit.Ml
         };
         var ci2 = new CocktailIngredient
         {
-            TypeId = 2, Type = new IngredientType { Name = "Vermouth" }, AmountValue = 15, AmountUnit = AmountUnit.Ml,
-            IsOptional = false
+            TypeId = 2, Type = new IngredientType { Name = "Vermouth" }, AmountValue = 15, AmountUnit = AmountUnit.Ml
         };
 
         var cocktail = new Cocktail
         {
             CocktailIngredients = new List<CocktailIngredient> { ci1, ci2 }
         };
-        var availability = new AvailabilityResult(AvailabilityStatus.Unavailable, new List<CocktailIngredient> { ci2 },
-            new List<CocktailIngredient>());
+        var availability = new AvailabilityResult(AvailabilityStatus.Unavailable, new List<CocktailIngredient> { ci2 });
 
         // Act
         var viewModel = new CocktailSummaryViewModel(cocktail, availability);

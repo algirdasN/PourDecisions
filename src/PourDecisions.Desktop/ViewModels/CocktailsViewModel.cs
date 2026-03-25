@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using PourDecisions.Application.AvailabilityEngine;
 using PourDecisions.Application.Services;
 using PourDecisions.Desktop.Services;
+using PourDecisions.Shared.Extensions;
 
 namespace PourDecisions.Desktop.ViewModels;
 
@@ -36,7 +37,7 @@ public partial class CocktailsViewModel(
     public bool ShowClearButton => _allCocktails.Count > 0 && FilteredCocktails.Count == 0;
 
     public string EmptyStateMessage => _allCocktails.Count == 0
-        ? "No cocktails available. Please add some cocktails in the Edit Cocktails page."
+        ? "No cocktails available. Add cocktails in the Edit Cocktails page."
         : "No cocktails match the current filters. Try adjusting the filters or search text.";
 
     public async Task LoadAsync()
@@ -63,7 +64,7 @@ public partial class CocktailsViewModel(
             })
             .ToList();
 
-        FilteredCocktails = new ObservableCollection<CocktailSummaryViewModel>(_allCocktails);
+        FilteredCocktails = _allCocktails.ToObservableCollection();
 
         SelectedCocktail = FilteredCocktails.FirstOrDefault();
     }
@@ -94,6 +95,22 @@ public partial class CocktailsViewModel(
         }
     }
 
+    private void FilterCocktails()
+    {
+        FilteredCocktails = _allCocktails
+            .Where(vm =>
+                (!ShowAvailableOnly || vm.AvailabilityStatus == AvailabilityStatus.Available) &&
+                (!ShowFavoriteOnly || vm.IsFavorite) &&
+                (string.IsNullOrWhiteSpace(SearchText) ||
+                 vm.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase)))
+            .ToObservableCollection();
+
+        if (SelectedCocktail == null || !FilteredCocktails.Contains(SelectedCocktail))
+        {
+            SelectedCocktail = FilteredCocktails.FirstOrDefault();
+        }
+    }
+
     partial void OnShowAvailableOnlyChanged(bool value)
     {
         FilterCocktails();
@@ -107,21 +124,5 @@ public partial class CocktailsViewModel(
     partial void OnSearchTextChanged(string value)
     {
         FilterCocktails();
-    }
-
-    private void FilterCocktails()
-    {
-        var filtered = _allCocktails.Where(vm =>
-            (!ShowAvailableOnly || vm.AvailabilityStatus == AvailabilityStatus.Available) &&
-            (!ShowFavoriteOnly || vm.IsFavorite) &&
-            (string.IsNullOrWhiteSpace(SearchText) ||
-             vm.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase)));
-
-        FilteredCocktails = new ObservableCollection<CocktailSummaryViewModel>(filtered);
-
-        if (SelectedCocktail == null || !FilteredCocktails.Contains(SelectedCocktail))
-        {
-            SelectedCocktail = FilteredCocktails.FirstOrDefault();
-        }
     }
 }

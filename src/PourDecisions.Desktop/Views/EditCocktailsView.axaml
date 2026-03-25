@@ -6,5 +6,28 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="PourDecisions.Desktop.Views.EditCocktailsView"
              x:DataType="vm:EditCocktailsViewModel">
-    Edit Cocktails View
+
+    <Grid ColumnDefinitions="1*, Auto, 2*">
+        <Grid Grid.Column="0" RowDefinitions="Auto,*">
+            <TextBlock Grid.Row="0"
+                       Text="{Binding EmptyStateMessage}"
+                       IsVisible="{Binding !HasExistingCocktails}"
+                       HorizontalAlignment="Center" />
+            <ListBox Grid.Row="1"
+                     ItemsSource="{Binding CocktailSummaries}"
+                     SelectedItem="{Binding SelectedCocktail}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid ColumnDefinitions="Auto,*">
+                            <TextBlock Grid.Column="0"
+                                       Text="{Binding IsFavorite, Converter={StaticResource BoolToFavoriteLabel}}" />
+                            <TextBlock Grid.Column="1" Text="{Binding Name}" />
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
+        <GridSplitter Grid.Column="1" />
+        <ContentControl Grid.Column="2" Content="{Binding CocktailEditItemViewModel}" />
+    </Grid>
 </UserControl>

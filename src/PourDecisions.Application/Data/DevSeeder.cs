@@ -60,9 +60,9 @@ public static class DevSeeder
             Instructions = "Stir with ice, strain into chilled glass.",
             CocktailIngredients = new List<CocktailIngredient>
             {
-                new() { Type = dryGin, AmountValue = 60, AmountUnit = AmountUnit.Ml },
-                new() { Type = dryVermouth, AmountValue = 10, AmountUnit = AmountUnit.Ml },
-                new() { Type = olive, AmountValue = 1, AmountUnit = AmountUnit.Piece, IsOptional = true }
+                new() { SortOrder = 0, Type = dryGin, AmountValue = 60, AmountUnit = AmountUnit.Ml },
+                new() { SortOrder = 1, Type = dryVermouth, AmountValue = 10, AmountUnit = AmountUnit.Ml },
+                new() { SortOrder = 2, Type = olive, AmountValue = 1, AmountUnit = AmountUnit.Piece }
             }
         };
 
@@ -72,8 +72,8 @@ public static class DevSeeder
             Instructions = "Build in glass with ice, stir gently.",
             CocktailIngredients = new List<CocktailIngredient>
             {
-                new() { Type = dryGin, AmountValue = 50, AmountUnit = AmountUnit.Ml },
-                new() { Type = tonic, AmountValue = 150, AmountUnit = AmountUnit.Ml }
+                new() { SortOrder = 0, Type = dryGin, AmountValue = 50, AmountUnit = AmountUnit.Ml },
+                new() { SortOrder = 1, Type = tonic, AmountValue = 150, AmountUnit = AmountUnit.Ml }
             }
         };
 
@@ -86,7 +86,7 @@ public static class DevSeeder
             tonic, cola, limejuice, lemonjuice, simplesyrup,
             // Garnishes
             olive, lemontwist, lime, cherry,
-            // Bottles (15 total, with multiples of same types and varying volumes)
+            // Bottles (15 total, with multiples of the same types and varying volumes)
             bottle1, bottle2, bottle3, bottle4, bottle5, bottle6, bottle7, bottle8, bottle9, bottle10, bottle11,
             bottle12, bottle13,
             // Cocktails

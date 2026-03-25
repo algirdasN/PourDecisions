@@ -5,9 +5,9 @@ namespace PourDecisions.Core.Entities;
 public class CocktailIngredient
 {
     public int Id { get; set; }
+    public int SortOrder { get; set; }
     public int AmountValue { get; set; }
     public AmountUnit AmountUnit { get; set; }
-    public bool IsOptional { get; set; }
 
     public int CocktailId { get; set; }
     public Cocktail Cocktail { get; set; } = null!;

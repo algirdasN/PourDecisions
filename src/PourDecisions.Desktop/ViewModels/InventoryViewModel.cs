@@ -41,7 +41,7 @@ public partial class InventoryViewModel(
 
         _ingredientTypeNames = ingredientTypeTask.Result;
 
-        var typeViewModels = bottleTask.Result
+        IngredientTypes = bottleTask.Result
             .GroupBy(bottle => bottle.Type)
             .OrderBy(group => group.Key.Name)
             .Select(group =>
@@ -52,9 +52,7 @@ public partial class InventoryViewModel(
                 vm.DeleteBottleClicked += OnDeleteButtonClicked;
                 return vm;
             })
-            .ToList();
-
-        IngredientTypes = new ObservableCollection<IngredientTypeViewModel>(typeViewModels);
+            .ToObservableCollection();
     }
 
     [RelayCommand]
@@ -110,7 +108,7 @@ public partial class InventoryViewModel(
                 _ingredientTypeNames.InsertIntoSorted(ingredientType.Name);
             }
 
-            AddBottleForm?.IngredientTypeNames = new ObservableCollection<string>(_ingredientTypeNames);
+            AddBottleForm?.IngredientTypeNames = _ingredientTypeNames.ToObservableCollection();
         }
         catch (Exception e)
         {
