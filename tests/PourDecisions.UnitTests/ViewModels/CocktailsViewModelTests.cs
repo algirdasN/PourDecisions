@@ -199,14 +199,14 @@ public class CocktailsViewModelTests
     public async Task Selecting_Ingredient_Filters_Cocktails_And_Sets_SelectedIngredientsText()
     {
         // Arrange
-        var gin = new IngredientType { Name = "Gin", IsTracked = true };
-        var vodka = new IngredientType { Name = "Vodka", IsTracked = true };
+        var gin = new IngredientType { Id = 1, Name = "Gin", IsTracked = true };
+        var vodka = new IngredientType { Id = 2, Name = "Vodka", IsTracked = true };
 
         var c1 = new Cocktail
-            { Id = 1, Name = "G&T", CocktailIngredients = new List<CocktailIngredient> { new() { Type = gin } } };
+            { Id = 1, Name = "G&T", CocktailIngredients = new List<CocktailIngredient> { new() { Type = gin, TypeId = 1 } } };
         var c2 = new Cocktail
         {
-            Id = 2, Name = "Vodka Soda", CocktailIngredients = new List<CocktailIngredient> { new() { Type = vodka } }
+            Id = 2, Name = "Vodka Soda", CocktailIngredients = new List<CocktailIngredient> { new() { Type = vodka, TypeId = 2 } }
         };
         _cocktailService.GetAllWithIngredientsAsync().Returns(new List<Cocktail> { c1, c2 });
         _availabilityService.GetCocktailAvailabilityAsync().Returns(new Dictionary<int, AvailabilityResult>
@@ -238,15 +238,15 @@ public class CocktailsViewModelTests
     public async Task Selecting_Multiple_Ingredients_Shows_Only_Cocktail_With_All_Selected()
     {
         // Arrange
-        var gin = new IngredientType { Name = "Gin", IsTracked = true };
-        var vermouth = new IngredientType { Name = "Vermouth", IsTracked = true };
+        var gin = new IngredientType { Id = 1, Name = "Gin", IsTracked = true };
+        var vermouth = new IngredientType { Id = 2, Name = "Vermouth", IsTracked = true };
 
         var c1 = new Cocktail
-            { Id = 1, Name = "G&T", CocktailIngredients = new List<CocktailIngredient> { new() { Type = gin } } };
+            { Id = 1, Name = "G&T", CocktailIngredients = new List<CocktailIngredient> { new() { Type = gin, TypeId = 1 } } };
         var c2 = new Cocktail
         {
             Id = 2, Name = "Martini",
-            CocktailIngredients = new List<CocktailIngredient> { new() { Type = gin }, new() { Type = vermouth } }
+            CocktailIngredients = new List<CocktailIngredient> { new() { Type = gin, TypeId = 1 }, new() { Type = vermouth, TypeId = 2 } }
         };
         _cocktailService.GetAllWithIngredientsAsync().Returns(new List<Cocktail> { c1, c2 });
         _availabilityService.GetCocktailAvailabilityAsync().Returns(new Dictionary<int, AvailabilityResult>

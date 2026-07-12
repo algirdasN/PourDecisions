@@ -82,13 +82,15 @@ public partial class CocktailsViewModel(
             })
             .ToList();
 
-        _allTrackedIngredients = _allCocktails
-            .SelectMany(vm => vm.TrackedIngredients)
+        _allTrackedIngredients = cocktails
+            .SelectMany(cocktail => cocktail.CocktailIngredients)
+            .Select(ingredient => ingredient.Type)
+            .Where(ingredientType => ingredientType.IsTracked)
             .Distinct()
-            .OrderBy(name => name)
-            .Select(name =>
+            .OrderBy(ingredientType => ingredientType.Name)
+            .Select(ingredientType =>
             {
-                var vm = new IngredientFilterViewModel(name);
+                var vm = new IngredientFilterViewModel(ingredientType.Id, ingredientType.Name);
                 vm.SelectionChanged += OnIngredientSelectionChanged;
                 return vm;
             })
@@ -159,8 +161,8 @@ public partial class CocktailsViewModel(
                 && (string.IsNullOrWhiteSpace(NameSearchText)
                     || vm.Name.Contains(NameSearchText, StringComparison.OrdinalIgnoreCase))
                 && _allTrackedIngredients
-                    .Where(nameVm => nameVm.IsSelected)
-                    .All(nameVm => vm.TrackedIngredients.Contains(nameVm.Name, StringComparer.OrdinalIgnoreCase))
+                    .Where(ingredientVm => ingredientVm.IsSelected)
+                    .All(ingredientVm => vm.TrackedIngredientIds.Contains(ingredientVm.Id))
             )
             .ToObservableCollection();
 
