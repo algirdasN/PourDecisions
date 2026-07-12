@@ -194,4 +194,155 @@ public class CocktailsViewModelTests
         // Should be empty now because ShowFavoriteOnly is true
         Assert.Empty(viewModel.FilteredCocktails);
     }
+
+    [Fact]
+    public async Task Selecting_Ingredient_Filters_Cocktails_And_Sets_SelectedIngredientsText()
+    {
+        // Arrange
+        var gin = new IngredientType { Name = "Gin", IsTracked = true };
+        var vodka = new IngredientType { Name = "Vodka", IsTracked = true };
+
+        var c1 = new Cocktail
+            { Id = 1, Name = "G&T", CocktailIngredients = new List<CocktailIngredient> { new() { Type = gin } } };
+        var c2 = new Cocktail
+        {
+            Id = 2, Name = "Vodka Soda", CocktailIngredients = new List<CocktailIngredient> { new() { Type = vodka } }
+        };
+        _cocktailService.GetAllWithIngredientsAsync().Returns(new List<Cocktail> { c1, c2 });
+        _availabilityService.GetCocktailAvailabilityAsync().Returns(new Dictionary<int, AvailabilityResult>
+        {
+            {
+                1,
+                new AvailabilityResult(AvailabilityStatus.Available, new List<CocktailIngredient>())
+            },
+            {
+                2,
+                new AvailabilityResult(AvailabilityStatus.Available, new List<CocktailIngredient>())
+            }
+        });
+
+        var viewModel = new CocktailsViewModel(_availabilityService, _cocktailService, _dialogService);
+        await viewModel.LoadAsync();
+
+        // Act - select Gin ingredient
+        var ginFilter = viewModel.FilteredIngredients.First(f => f.Name == "Gin");
+        ginFilter.IsSelected = true; // should trigger selection changed and filtering
+
+        // Assert
+        Assert.Single(viewModel.FilteredCocktails);
+        Assert.Equal("G&T", viewModel.FilteredCocktails[0].Name);
+        Assert.Equal("Gin", viewModel.SelectedIngredientsText);
+    }
+
+    [Fact]
+    public async Task Selecting_Multiple_Ingredients_Shows_Only_Cocktail_With_All_Selected()
+    {
+        // Arrange
+        var gin = new IngredientType { Name = "Gin", IsTracked = true };
+        var vermouth = new IngredientType { Name = "Vermouth", IsTracked = true };
+
+        var c1 = new Cocktail
+            { Id = 1, Name = "G&T", CocktailIngredients = new List<CocktailIngredient> { new() { Type = gin } } };
+        var c2 = new Cocktail
+        {
+            Id = 2, Name = "Martini",
+            CocktailIngredients = new List<CocktailIngredient> { new() { Type = gin }, new() { Type = vermouth } }
+        };
+        _cocktailService.GetAllWithIngredientsAsync().Returns(new List<Cocktail> { c1, c2 });
+        _availabilityService.GetCocktailAvailabilityAsync().Returns(new Dictionary<int, AvailabilityResult>
+        {
+            {
+                1,
+                new AvailabilityResult(AvailabilityStatus.Available, new List<CocktailIngredient>())
+            },
+            {
+                2,
+                new AvailabilityResult(AvailabilityStatus.Available, new List<CocktailIngredient>())
+            }
+        });
+
+        var viewModel = new CocktailsViewModel(_availabilityService, _cocktailService, _dialogService);
+        await viewModel.LoadAsync();
+
+        // Act - select both Gin and Vermouth
+        var filterGin = viewModel.FilteredIngredients.First(f => f.Name == "Gin");
+        var filterVermouth = viewModel.FilteredIngredients.First(f => f.Name == "Vermouth");
+        filterGin.IsSelected = true;
+        filterVermouth.IsSelected = true;
+
+        // Assert
+        Assert.Single(viewModel.FilteredCocktails);
+        Assert.Equal("Martini", viewModel.FilteredCocktails[0].Name);
+        // SelectedIngredientsText should contain both names (ordered alphabetically by construction)
+        Assert.Equal("Gin, Vermouth", viewModel.SelectedIngredientsText);
+    }
+
+    [Fact]
+    public async Task IngredientSearchText_Filters_FilteredIngredients()
+    {
+        // Arrange
+        var gin = new IngredientType { Name = "Gin", IsTracked = true };
+        var vodka = new IngredientType { Name = "Vodka", IsTracked = true };
+
+        var c1 = new Cocktail
+            { Id = 1, Name = "G&T", CocktailIngredients = new List<CocktailIngredient> { new() { Type = gin } } };
+        var c2 = new Cocktail
+        {
+            Id = 2, Name = "Vodka Soda", CocktailIngredients = new List<CocktailIngredient> { new() { Type = vodka } }
+        };
+
+        _cocktailService.GetAllWithIngredientsAsync().Returns(new List<Cocktail> { c1, c2 });
+        _availabilityService.GetCocktailAvailabilityAsync().Returns(new Dictionary<int, AvailabilityResult>
+        {
+            {
+                1,
+                new AvailabilityResult(AvailabilityStatus.Available, new List<CocktailIngredient>())
+            },
+            {
+                2,
+                new AvailabilityResult(AvailabilityStatus.Available, new List<CocktailIngredient>())
+            }
+        });
+
+        var viewModel = new CocktailsViewModel(_availabilityService, _cocktailService, _dialogService);
+        await viewModel.LoadAsync();
+
+        // Act - search for 'vo' should match Vodka only
+        viewModel.IngredientSearchText = "vo";
+
+        // Assert
+        Assert.Single(viewModel.FilteredIngredients);
+        Assert.Equal("Vodka", viewModel.FilteredIngredients[0].Name);
+    }
+
+    [Fact]
+    public async Task ClearIngredientFilters_ResetsSelections_And_SelectedIngredientsText()
+    {
+        // Arrange
+        var gin = new IngredientType { Name = "Gin", IsTracked = true };
+        var c1 = new Cocktail
+            { Id = 1, Name = "G&T", CocktailIngredients = new List<CocktailIngredient> { new() { Type = gin } } };
+        _cocktailService.GetAllWithIngredientsAsync().Returns(new List<Cocktail> { c1 });
+        _availabilityService.GetCocktailAvailabilityAsync().Returns(new Dictionary<int, AvailabilityResult>
+        {
+            {
+                1,
+                new AvailabilityResult(AvailabilityStatus.Available, new List<CocktailIngredient>())
+            }
+        });
+
+        var viewModel = new CocktailsViewModel(_availabilityService, _cocktailService, _dialogService);
+        await viewModel.LoadAsync();
+
+        var filter = viewModel.FilteredIngredients.First();
+        filter.IsSelected = true;
+        Assert.Equal("Gin", viewModel.SelectedIngredientsText);
+
+        // Act
+        viewModel.ClearIngredientFiltersCommand.Execute(null);
+
+        // Assert
+        Assert.Equal("Select ingredients...", viewModel.SelectedIngredientsText);
+        Assert.DoesNotContain(viewModel.FilteredIngredients, f => f.IsSelected);
+    }
 }
