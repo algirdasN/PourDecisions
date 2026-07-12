@@ -42,7 +42,6 @@ public partial class CocktailsViewModel(
     [ObservableProperty]
     private bool _showAvailableOnly;
 
-
     [ObservableProperty]
     private bool _showFavoriteOnly;
 
@@ -103,6 +102,44 @@ public partial class CocktailsViewModel(
         SelectedCocktail = FilteredCocktails.FirstOrDefault();
     }
 
+    private async Task SetFavoriteAsync(int cocktailId, bool isFavorite)
+    {
+        try
+        {
+            await cocktailService.SetFavoriteAsync(cocktailId, isFavorite);
+        }
+        catch (Exception e)
+        {
+            await dialogService.ShowInformationDialogAsync("Failed to update favorite status", e.Message);
+        }
+    }
+
+    #region Helpers
+
+    private void FilterCocktails()
+    {
+        FilteredCocktails = _allCocktails
+            .Where(vm =>
+                (!ShowAvailableOnly || vm.AvailabilityStatus == AvailabilityStatus.Available)
+                && (!ShowFavoriteOnly || vm.IsFavorite)
+                && (string.IsNullOrWhiteSpace(NameSearchText)
+                    || vm.Name.Contains(NameSearchText, StringComparison.OrdinalIgnoreCase))
+                && _allTrackedIngredients
+                    .Where(ingredientVm => ingredientVm.IsSelected)
+                    .All(ingredientVm => vm.TrackedIngredientIds.Contains(ingredientVm.Id))
+            )
+            .ToObservableCollection();
+
+        if (SelectedCocktail == null || !FilteredCocktails.Contains(SelectedCocktail))
+        {
+            SelectedCocktail = FilteredCocktails.FirstOrDefault();
+        }
+    }
+
+    #endregion
+
+    #region Commands
+
     [RelayCommand]
     private void ClearFilters()
     {
@@ -124,6 +161,10 @@ public partial class CocktailsViewModel(
         OnIngredientSelectionChanged();
     }
 
+    #endregion
+
+    #region Events
+
     private void OnFavoriteToggled(int cocktailId, bool isFavorite)
     {
         _ = SetFavoriteAsync(cocktailId, isFavorite);
@@ -138,38 +179,6 @@ public partial class CocktailsViewModel(
             : text;
 
         FilterCocktails();
-    }
-
-    private async Task SetFavoriteAsync(int cocktailId, bool isFavorite)
-    {
-        try
-        {
-            await cocktailService.SetFavoriteAsync(cocktailId, isFavorite);
-        }
-        catch (Exception e)
-        {
-            await dialogService.ShowInformationDialogAsync("Failed to update favorite status", e.Message);
-        }
-    }
-
-    private void FilterCocktails()
-    {
-        FilteredCocktails = _allCocktails
-            .Where(vm =>
-                (!ShowAvailableOnly || vm.AvailabilityStatus == AvailabilityStatus.Available)
-                && (!ShowFavoriteOnly || vm.IsFavorite)
-                && (string.IsNullOrWhiteSpace(NameSearchText)
-                    || vm.Name.Contains(NameSearchText, StringComparison.OrdinalIgnoreCase))
-                && _allTrackedIngredients
-                    .Where(ingredientVm => ingredientVm.IsSelected)
-                    .All(ingredientVm => vm.TrackedIngredientIds.Contains(ingredientVm.Id))
-            )
-            .ToObservableCollection();
-
-        if (SelectedCocktail == null || !FilteredCocktails.Contains(SelectedCocktail))
-        {
-            SelectedCocktail = FilteredCocktails.FirstOrDefault();
-        }
     }
 
     partial void OnShowAvailableOnlyChanged(bool value)
@@ -194,4 +203,6 @@ public partial class CocktailsViewModel(
                              || nameVm.Name.Contains(value, StringComparison.OrdinalIgnoreCase))
             .ToObservableCollection();
     }
+
+    #endregion
 }
