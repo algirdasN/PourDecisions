@@ -14,7 +14,7 @@
         <Grid Grid.Row="1" ColumnDefinitions="*,*">
             <Grid Grid.Column="0" RowDefinitions="Auto,*">
                 <CheckBox Grid.Row="0" Content="Favorite" IsChecked="{Binding IsFavorite}" />
-                <ItemsControl Grid.Row="1" ItemsSource="{Binding Ingredients}">
+                <ItemsControl Grid.Row="1" ItemsSource="{Binding IngredientInfo}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <TextBlock Classes.isMissing="{Binding IsMissing}"

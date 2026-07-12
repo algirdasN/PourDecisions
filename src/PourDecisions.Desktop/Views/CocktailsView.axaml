@@ -8,16 +8,60 @@
              x:DataType="vm:CocktailsViewModel">
 
     <Grid ColumnDefinitions="1*, Auto, 2*">
-        <Grid Grid.Column="0" RowDefinitions="Auto,Auto,*">
-            <Grid Grid.Row="0" ColumnDefinitions="Auto,*">
+        <Grid Grid.Column="0" RowDefinitions="Auto,Auto,Auto,*" Grid.IsSharedSizeScope="True">
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition SharedSizeGroup="Label" Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" Text="Search by name: " VerticalAlignment="Center" />
-                <TextBox Grid.Column="1" Text="{Binding SearchText}" />
+                <TextBox Grid.Column="1" Text="{Binding NameSearchText}" />
             </Grid>
-            <Grid Grid.Row="1" ColumnDefinitions="*,*">
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition SharedSizeGroup="Label" Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="Filter by ingredient: " VerticalAlignment="Center" />
+                <DropDownButton Grid.Column="1" HorizontalAlignment="Stretch">
+                    <DropDownButton.Content>
+                        <TextBlock Text="{Binding SelectedIngredientsText}" />
+                    </DropDownButton.Content>
+                    <DropDownButton.Styles>
+                        <Style Selector="FlyoutPresenter">
+                            <Setter Property="Width" Value="{Binding $parent[DropDownButton].Bounds.Width}" />
+                        </Style>
+                    </DropDownButton.Styles>
+                    <DropDownButton.Flyout>
+                        <Flyout Placement="BottomEdgeAlignedLeft">
+                            <Grid RowDefinitions="Auto,*">
+                                <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+                                    <TextBox Grid.Column="0" Watermark="Search..."
+                                             Text="{Binding IngredientSearchText}" />
+                                    <Button Grid.Column="1" Content="Clear"
+                                            Command="{Binding ClearIngredientFiltersCommand}" />
+                                </Grid>
+                                <ScrollViewer Grid.Row="1">
+                                    <ItemsControl ItemsSource="{Binding FilteredIngredients}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <CheckBox IsChecked="{Binding IsSelected}"
+                                                          Content="{Binding Name}"
+                                                          HorizontalAlignment="Stretch" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </Grid>
+                        </Flyout>
+                    </DropDownButton.Flyout>
+                </DropDownButton>
+            </Grid>
+            <Grid Grid.Row="2" ColumnDefinitions="*,*">
                 <CheckBox Grid.Column="0" Content="Available only" IsChecked="{Binding ShowAvailableOnly}" />
                 <CheckBox Grid.Column="1" Content="Favorite only" IsChecked="{Binding ShowFavoriteOnly}" />
             </Grid>
-            <ListBox Grid.Row="2"
+            <ListBox Grid.Row="3"
                      IsVisible="{Binding HasResults}"
                      ItemsSource="{Binding FilteredCocktails}"
                      SelectedItem="{Binding SelectedCocktail}">
@@ -34,7 +78,7 @@
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
-            <Grid Grid.Row="2" RowDefinitions="Auto,Auto">
+            <Grid Grid.Row="3" RowDefinitions="Auto,Auto">
                 <TextBlock Grid.Row="0"
                            Text="{Binding EmptyStateMessage}"
                            IsVisible="{Binding !HasResults}"

@@ -15,7 +15,11 @@ public partial class CocktailSummaryViewModel(Cocktail cocktail, AvailabilityRes
     public string Name { get; } = cocktail.Name;
     public string Instructions { get; } = cocktail.Instructions;
 
-    public List<IngredientAvailabilityInfo> Ingredients { get; } = cocktail.CocktailIngredients
+    public List<string> TrackedIngredients { get; } = cocktail.CocktailIngredients                 
+        .Where(ci => ci.Type.IsTracked)                                                            
+        .Select(ci => ci.Type.Name).ToList();                                                      
+                                                                                               
+    public List<IngredientAvailabilityInfo> IngredientInfo { get; } = cocktail.CocktailIngredients 
         .Select(ci => new IngredientAvailabilityInfo(IngredientDisplayText(ci),
             availabilityResult.MissingIngredients.Any(missing => missing.TypeId == ci.TypeId)))
         .ToList();

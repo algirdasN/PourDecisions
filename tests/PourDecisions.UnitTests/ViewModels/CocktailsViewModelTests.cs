@@ -63,7 +63,7 @@ public class CocktailsViewModelTests
         await viewModel.LoadAsync();
 
         // Act
-        viewModel.SearchText = "MarT"; // Case-insensitive
+        viewModel.NameSearchText = "MarT"; // Case-insensitive
 
         // Assert
         Assert.Single(viewModel.FilteredCocktails);
@@ -140,7 +140,7 @@ public class CocktailsViewModelTests
         // Arrange
         var viewModel = new CocktailsViewModel(_availabilityService, _cocktailService, _dialogService)
         {
-            SearchText = "something",
+            NameSearchText = "something",
             ShowAvailableOnly = true,
             ShowFavoriteOnly = true
         };
@@ -149,7 +149,7 @@ public class CocktailsViewModelTests
         viewModel.ClearFiltersCommand.Execute(null);
 
         // Assert
-        Assert.Equal(string.Empty, viewModel.SearchText);
+        Assert.Equal(string.Empty, viewModel.NameSearchText);
         Assert.False(viewModel.ShowAvailableOnly);
         Assert.False(viewModel.ShowFavoriteOnly);
     }

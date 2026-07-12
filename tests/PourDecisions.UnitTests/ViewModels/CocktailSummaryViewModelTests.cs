@@ -103,11 +103,11 @@ public class CocktailSummaryViewModelTests
         var viewModel = new CocktailSummaryViewModel(cocktail, availability);
 
         // Assert
-        Assert.Equal(2, viewModel.Ingredients.Count);
-        Assert.Equal("60 ml of gin", viewModel.Ingredients[0].DisplayText);
-        Assert.False(viewModel.Ingredients[0].IsMissing);
-        Assert.Equal("1 piece of lemon", viewModel.Ingredients[1].DisplayText);
-        Assert.False(viewModel.Ingredients[1].IsMissing);
+        Assert.Equal(2, viewModel.IngredientInfo.Count);
+        Assert.Equal("60 ml of gin", viewModel.IngredientInfo[0].DisplayText);
+        Assert.False(viewModel.IngredientInfo[0].IsMissing);
+        Assert.Equal("1 piece of lemon", viewModel.IngredientInfo[1].DisplayText);
+        Assert.False(viewModel.IngredientInfo[1].IsMissing);
     }
 
     [Fact]
@@ -133,7 +133,7 @@ public class CocktailSummaryViewModelTests
         var viewModel = new CocktailSummaryViewModel(cocktail, availability);
 
         // Assert
-        Assert.False(viewModel.Ingredients[0].IsMissing);
-        Assert.True(viewModel.Ingredients[1].IsMissing);
+        Assert.False(viewModel.IngredientInfo[0].IsMissing);
+        Assert.True(viewModel.IngredientInfo[1].IsMissing);
     }
 }
