@@ -36,7 +36,7 @@
                         <Flyout Placement="BottomEdgeAlignedLeft">
                             <Grid RowDefinitions="Auto,*">
                                 <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
-                                    <TextBox Grid.Column="0" Watermark="Search..."
+                                    <TextBox Grid.Column="0" PlaceholderText="Search..."
                                              Text="{Binding IngredientSearchText}" />
                                     <Button Grid.Column="1" Content="Clear"
                                             Command="{Binding ClearIngredientFiltersCommand}" />

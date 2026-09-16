@@ -101,7 +101,7 @@ public class EditCocktailsViewModelTests
         _ingredientService.GetIngredientTypeNamesAsync().Returns(new List<string>());
         _cocktailService.GetWithIngredientsAsync(1).Returns(new Cocktail { Id = 1, Name = "Martini", CocktailIngredients = new List<CocktailIngredient>() });
         _dialogService.ShowConfirmationDialogAsync(Arg.Any<string>(), Arg.Any<string>(), "Delete", "Cancel")
-            .Returns(ContentDialogResult.Primary);
+            .Returns(FAContentDialogResult.Primary);
 
         var viewModel = new EditCocktailsViewModel(_cocktailService, _dialogService, _ingredientService);
         await viewModel.LoadAsync();

@@ -135,7 +135,7 @@ public partial class EditCocktailsViewModel(
         var result = await dialogService.ShowConfirmationDialogAsync("Unsaved changes",
             "Are you sure you want to discard changes?", "Discard", "Cancel");
 
-        return result == ContentDialogResult.Primary;
+        return result == FAContentDialogResult.Primary;
     }
 
     private async Task LoadCocktailFormAsync(int? cocktailId)
@@ -173,7 +173,7 @@ public partial class EditCocktailsViewModel(
             var result = await dialogService.ShowConfirmationDialogAsync("Delete cocktail", message,
                 "Delete", "Cancel");
 
-            if (result != ContentDialogResult.Primary)
+            if (result != FAContentDialogResult.Primary)
             {
                 return;
             }
