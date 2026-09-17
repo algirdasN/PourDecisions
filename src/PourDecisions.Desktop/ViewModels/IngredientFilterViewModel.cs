@@ -7,7 +7,7 @@ public partial class IngredientFilterViewModel(int id, string name) : ViewModelB
     [ObservableProperty]
     private bool _isSelected;
 
-    public int Id { get; set; } = id;
+    public int Id { get; } = id;
     public string Name { get; } = name;
 
     public event Action? SelectionChanged;
