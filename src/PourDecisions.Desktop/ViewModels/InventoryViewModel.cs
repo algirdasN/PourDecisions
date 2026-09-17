@@ -154,7 +154,7 @@ public partial class InventoryViewModel(
 
             var result = await dialogService.ShowConfirmationDialogAsync("Delete bottle", message, "Delete", "Cancel");
 
-            if (result != ContentDialogResult.Primary)
+            if (result != FAContentDialogResult.Primary)
             {
                 return;
             }

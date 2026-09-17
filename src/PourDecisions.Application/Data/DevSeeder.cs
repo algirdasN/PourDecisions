@@ -77,6 +77,66 @@ public static class DevSeeder
             }
         };
 
+        var vodkaTonic = new Cocktail
+        {
+            Name = "Vodka Tonic",
+            Instructions = "Build in a highball with ice, pour vodka, top with tonic, garnish with lime.",
+            CocktailIngredients = new List<CocktailIngredient>
+            {
+                new() { SortOrder = 0, Type = vodka, AmountValue = 50, AmountUnit = AmountUnit.Ml },
+                new() { SortOrder = 1, Type = tonic, AmountValue = 150, AmountUnit = AmountUnit.Ml },
+                new() { SortOrder = 2, Type = lime, AmountValue = 1, AmountUnit = AmountUnit.Piece }
+            }
+        };
+
+        var rumCola = new Cocktail
+        {
+            Name = "Rum & Cola",
+            Instructions = "Build in a highball with ice, pour rum, top with cola, stir gently.",
+            CocktailIngredients = new List<CocktailIngredient>
+            {
+                new() { SortOrder = 0, Type = rum, AmountValue = 50, AmountUnit = AmountUnit.Ml },
+                new() { SortOrder = 1, Type = cola, AmountValue = 150, AmountUnit = AmountUnit.Ml }
+            }
+        };
+
+        var whiskeySour = new Cocktail
+        {
+            Name = "Whiskey Sour",
+            Instructions = "Shake with ice, strain into glass. Garnish with cherry.",
+            CocktailIngredients = new List<CocktailIngredient>
+            {
+                new() { SortOrder = 0, Type = whiskey, AmountValue = 50, AmountUnit = AmountUnit.Ml },
+                new() { SortOrder = 1, Type = lemonjuice, AmountValue = 25, AmountUnit = AmountUnit.Ml },
+                new() { SortOrder = 2, Type = simplesyrup, AmountValue = 15, AmountUnit = AmountUnit.Ml },
+                new() { SortOrder = 3, Type = cherry, AmountValue = 1, AmountUnit = AmountUnit.Piece }
+            }
+        };
+
+        var gimlet = new Cocktail
+        {
+            Name = "Gimlet",
+            Instructions = "Shake with ice and strain into chilled glass.",
+            CocktailIngredients = new List<CocktailIngredient>
+            {
+                new() { SortOrder = 0, Type = dryGin, AmountValue = 60, AmountUnit = AmountUnit.Ml },
+                new() { SortOrder = 1, Type = limejuice, AmountValue = 22, AmountUnit = AmountUnit.Ml },
+                new() { SortOrder = 2, Type = simplesyrup, AmountValue = 10, AmountUnit = AmountUnit.Ml }
+            }
+        };
+
+        var manhattan = new Cocktail
+        {
+            Name = "Manhattan",
+            Instructions = "Stir with ice, strain into chilled glass. Garnish with cherry.",
+            CocktailIngredients = new List<CocktailIngredient>
+            {
+                new() { SortOrder = 0, Type = whiskey, AmountValue = 50, AmountUnit = AmountUnit.Ml },
+                new() { SortOrder = 1, Type = sweetVermouth, AmountValue = 20, AmountUnit = AmountUnit.Ml },
+                new() { SortOrder = 2, Type = cherry, AmountValue = 1, AmountUnit = AmountUnit.Piece }
+            }
+        };
+
         db.AddRange(
             // Spirits
             dryGin, vodka, rum, tequila, whiskey, brandy,
@@ -90,7 +150,7 @@ public static class DevSeeder
             bottle1, bottle2, bottle3, bottle4, bottle5, bottle6, bottle7, bottle8, bottle9, bottle10, bottle11,
             bottle12, bottle13,
             // Cocktails
-            martini, gintonic
+            martini, gintonic, vodkaTonic, rumCola, whiskeySour, gimlet, manhattan
         );
         db.SaveChanges();
     }

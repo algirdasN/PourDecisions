@@ -20,7 +20,7 @@
                        VerticalAlignment="Center" />
             <AutoCompleteBox Grid.Column="1" Grid.Row="0" Grid.ColumnSpan="3"
                              ItemsSource="{Binding IngredientTypeNames}"
-                             Text="{Binding IngredientTypeName, Mode=TwoWay}"
+                             Text="{Binding IngredientTypeName}"
                              FilterMode="ContainsOrdinal"
                              MinimumPrefixLength="0"
                              HorizontalAlignment="Stretch" />

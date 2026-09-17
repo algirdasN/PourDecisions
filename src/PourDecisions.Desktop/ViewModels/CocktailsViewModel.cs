@@ -16,16 +16,30 @@ public partial class CocktailsViewModel(
 {
     private List<CocktailSummaryViewModel> _allCocktails = [];
 
+    private List<IngredientFilterViewModel> _allTrackedIngredients = [];
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasResults))]
     [NotifyPropertyChangedFor(nameof(ShowClearButton))]
     private ObservableCollection<CocktailSummaryViewModel> _filteredCocktails = [];
 
     [ObservableProperty]
-    private string _searchText = string.Empty;
+    [NotifyPropertyChangedFor(nameof(SelectedIngredientsText))]
+    private ObservableCollection<IngredientFilterViewModel> _filteredIngredients = [];
+
+    [ObservableProperty]
+    private string _ingredientSearchText = string.Empty;
+
+    private bool _isUpdating;
+
+    [ObservableProperty]
+    private string _nameSearchText = string.Empty;
 
     [ObservableProperty]
     private CocktailSummaryViewModel? _selectedCocktail;
+
+    [ObservableProperty]
+    private string _selectedIngredientsText = "Select ingredients...";
 
     [ObservableProperty]
     private bool _showAvailableOnly;
@@ -50,6 +64,11 @@ public partial class CocktailsViewModel(
             vm.FavoriteToggled -= OnFavoriteToggled;
         }
 
+        foreach (var vm in _allTrackedIngredients)
+        {
+            vm.SelectionChanged -= OnIngredientSelectionChanged;
+        }
+
         await Task.WhenAll(cocktailTask, availabilityTask);
 
         var cocktails = cocktailTask.Result;
@@ -64,23 +83,25 @@ public partial class CocktailsViewModel(
             })
             .ToList();
 
+        _allTrackedIngredients = cocktails
+            .SelectMany(cocktail => cocktail.CocktailIngredients)
+            .Select(ingredient => ingredient.Type)
+            .Where(ingredientType => ingredientType.IsTracked)
+            .Distinct()
+            .OrderBy(ingredientType => ingredientType.Name)
+            .Select(ingredientType =>
+            {
+                var vm = new IngredientFilterViewModel(ingredientType.Id, ingredientType.Name);
+                vm.SelectionChanged += OnIngredientSelectionChanged;
+                return vm;
+            })
+            .ToList();
+
         FilteredCocktails = _allCocktails.ToObservableCollection();
 
+        FilteredIngredients = _allTrackedIngredients.ToObservableCollection();
+
         SelectedCocktail = FilteredCocktails.FirstOrDefault();
-    }
-
-    [RelayCommand]
-    private void ClearFilters()
-    {
-        SearchText = string.Empty;
-        ShowAvailableOnly = false;
-        ShowFavoriteOnly = false;
-    }
-
-    private void OnFavoriteToggled(int cocktailId, bool isFavorite)
-    {
-        _ = SetFavoriteAsync(cocktailId, isFavorite);
-        FilterCocktails();
     }
 
     private async Task SetFavoriteAsync(int cocktailId, bool isFavorite)
@@ -95,20 +116,90 @@ public partial class CocktailsViewModel(
         }
     }
 
+    #region Helpers
+
     private void FilterCocktails()
     {
+        if (_isUpdating)
+        {
+            return;
+        }
+
         FilteredCocktails = _allCocktails
             .Where(vm =>
-                (!ShowAvailableOnly || vm.AvailabilityStatus == AvailabilityStatus.Available) &&
-                (!ShowFavoriteOnly || vm.IsFavorite) &&
-                (string.IsNullOrWhiteSpace(SearchText) ||
-                 vm.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase)))
+                (!ShowAvailableOnly || vm.AvailabilityStatus == AvailabilityStatus.Available)
+                && (!ShowFavoriteOnly || vm.IsFavorite)
+                && (string.IsNullOrWhiteSpace(NameSearchText)
+                    || vm.Name.Contains(NameSearchText, StringComparison.OrdinalIgnoreCase))
+                && _allTrackedIngredients
+                    .Where(ingredientVm => ingredientVm.IsSelected)
+                    .All(ingredientVm => vm.TrackedIngredientIds.Contains(ingredientVm.Id))
+            )
             .ToObservableCollection();
 
         if (SelectedCocktail == null || !FilteredCocktails.Contains(SelectedCocktail))
         {
             SelectedCocktail = FilteredCocktails.FirstOrDefault();
         }
+    }
+
+    #endregion
+
+    #region Commands
+
+    [RelayCommand]
+    private void ClearFilters()
+    {
+        _isUpdating = true;
+
+        NameSearchText = string.Empty;
+        ShowAvailableOnly = false;
+        ShowFavoriteOnly = false;
+
+        _isUpdating = false;
+
+        ClearIngredientFilters();
+    }
+
+    [RelayCommand]
+    private void ClearIngredientFilters()
+    {
+        _isUpdating = true;
+
+        IngredientSearchText = string.Empty;
+        foreach (var ingredient in _allTrackedIngredients)
+        {
+            ingredient.IsSelected = false;
+        }
+
+        _isUpdating = false;
+
+        OnIngredientSelectionChanged();
+    }
+
+    #endregion
+
+    #region Events
+
+    private void OnFavoriteToggled(int cocktailId, bool isFavorite)
+    {
+        _ = SetFavoriteAsync(cocktailId, isFavorite);
+        FilterCocktails();
+    }
+
+    private void OnIngredientSelectionChanged()
+    {
+        if (_isUpdating)
+        {
+            return;
+        }
+
+        var text = string.Join(", ", _allTrackedIngredients.Where(vm => vm.IsSelected).Select(vm => vm.Name));
+        SelectedIngredientsText = string.IsNullOrWhiteSpace(text)
+            ? "Select ingredients..."
+            : text;
+
+        FilterCocktails();
     }
 
     partial void OnShowAvailableOnlyChanged(bool value)
@@ -121,8 +212,18 @@ public partial class CocktailsViewModel(
         FilterCocktails();
     }
 
-    partial void OnSearchTextChanged(string value)
+    partial void OnNameSearchTextChanged(string value)
     {
         FilterCocktails();
     }
+
+    partial void OnIngredientSearchTextChanged(string value)
+    {
+        FilteredIngredients = _allTrackedIngredients
+            .Where(nameVm => string.IsNullOrWhiteSpace(value)
+                             || nameVm.Name.Contains(value, StringComparison.OrdinalIgnoreCase))
+            .ToObservableCollection();
+    }
+
+    #endregion
 }

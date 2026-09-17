@@ -12,8 +12,8 @@ public interface IDialogService
     /// </summary>
     /// <param name="title">The title of the dialog.</param>
     /// <param name="message">The informational message to display.</param>
-    /// <returns>A <see cref="ContentDialogResult"/> representing the user's action.</returns>
-    Task<ContentDialogResult> ShowInformationDialogAsync(string title, string message);
+    /// <returns>A <see cref="FAContentDialogResult"/> representing the user's action.</returns>
+    Task<FAContentDialogResult> ShowInformationDialogAsync(string title, string message);
 
     /// <summary>
     /// Asynchronously displays a confirmation dialog with a title, a message, a primary action button, and a close button.
@@ -22,20 +22,20 @@ public interface IDialogService
     /// <param name="message">The message describing the action to confirm.</param>
     /// <param name="primaryButtonText">The text for the primary action button.</param>
     /// <param name="closeButtonText">The text for the close or cancel button.</param>
-    /// <returns>A <see cref="ContentDialogResult"/> representing the user's choice.</returns>
-    Task<ContentDialogResult> ShowConfirmationDialogAsync(string title, string message, string primaryButtonText,
+    /// <returns>A <see cref="FAContentDialogResult"/> representing the user's choice.</returns>
+    Task<FAContentDialogResult> ShowConfirmationDialogAsync(string title, string message, string primaryButtonText,
         string closeButtonText);
 }
 
 /// <summary>
-/// Implements dialog operations using FluentAvalonia's <see cref="ContentDialog"/>.
+/// Implements dialog operations using FluentAvalonia's <see cref="FAContentDialog"/>.
 /// </summary>
 public class DialogService : IDialogService
 {
     /// <inheritdoc/>
-    public async Task<ContentDialogResult> ShowInformationDialogAsync(string title, string message)
+    public async Task<FAContentDialogResult> ShowInformationDialogAsync(string title, string message)
     {
-        var dialog = new ContentDialog
+        var dialog = new FAContentDialog
         {
             Title = title,
             Content = message,
@@ -46,10 +46,10 @@ public class DialogService : IDialogService
     }
 
     /// <inheritdoc/>
-    public async Task<ContentDialogResult> ShowConfirmationDialogAsync(string title, string message,
+    public async Task<FAContentDialogResult> ShowConfirmationDialogAsync(string title, string message,
         string primaryButtonText, string closeButtonText)
     {
-        var dialog = new ContentDialog
+        var dialog = new FAContentDialog
         {
             Title = title,
             Content = message,

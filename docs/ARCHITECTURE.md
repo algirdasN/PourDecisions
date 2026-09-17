@@ -33,10 +33,11 @@ The separation of `Core` and `Application` from `Desktop` is intentional — a f
 | Layer | Technology |
 |---|---|
 | Platform | .NET 10.0 |
-| UI Framework | Avalonia UI (v11.3) |
+| UI Framework | Avalonia UI (v12.1) |
 | UI Pattern | MVVM via CommunityToolkit.Mvvm (v8.4) |
 | Data Access | Entity Framework Core (v10.0) + SQLite |
 | DI Container | Microsoft.Extensions.DependencyInjection (v10.0) |
+| Dialogs | FluentAvaloniaUI (v3.1) |
 
 ---
 
@@ -203,7 +204,9 @@ public interface IAsyncLoadable
 
 ### Key ViewModels
 
-**`CocktailsViewModel`** — Implements `IAsyncLoadable`. Fires `GetAllWithIngredientsAsync` and `GetCocktailAvailabilityAsync` **concurrently** via `Task.WhenAll` on load. Maintains `_allCocktails` (full list) and `FilteredCocktails` (observable, bound to UI). Filtering (search, available-only, favorites-only) is applied via AND logic and re-run on any filter property change or favorite toggle. Services are injected here; child `CocktailSummaryViewModel`s have no infrastructure dependencies.
+**`CocktailsViewModel`** — Implements `IAsyncLoadable`. Fires `GetAllWithIngredientsAsync` and `GetCocktailAvailabilityAsync` **concurrently** via `Task.WhenAll` on load. Maintains `_allCocktails` (full list) and `FilteredCocktails` (observable, bound to UI). Filtering (name search, available-only, favorites-only, ingredient type) is applied via AND logic and re-run on any filter property change or favorite toggle. Services are injected here; child `CocktailSummaryViewModel`s have no infrastructure dependencies.
+
+**Ingredient type filter (PD-010).** `_allTrackedIngredients` (`List<IngredientFilterViewModel>`) is derived client-side from the loaded cocktail graph on every `LoadAsync` — not from a separate service query — by projecting each cocktail's tracked `CocktailIngredient.Type`, deduplicating, and sorting alphabetically. This means only ingredient types actually used by at least one recipe appear as filter options, which is the correct behaviour (a tracked type with no recipes using it would be a useless filter option) rather than an implementation shortcut. Matching against `FilterCocktails()` is ID-based (`CocktailIngredient.TypeId`), not name-based, for consistency with `AvailabilityCalculator` and resilience to future type renames (PD-009a). Selecting one or more types requires a cocktail to use **every** selected type (superset match) — this answers "what can I make with my gin and vermouth", not "what uses gin or vermouth". The filter is intentionally independent of bottle/availability state, so a type can be filtered on whether or not the user currently owns it. An `_isUpdating` bool guards `ClearFilters` / `ClearIngredientFilters` against firing a redundant `FilterCocktails()` call per item during bulk deselection.
 
 **`CocktailSummaryViewModel`** — Pure display model. No service dependencies. Wraps a `Cocktail` entity and `AvailabilityResult`. Raises `FavoriteToggled` event (not subscribed within itself — parent owns the subscription and calls `SetFavoriteAsync` fire-and-forget).
 
@@ -214,6 +217,8 @@ public interface IAsyncLoadable
 **`CocktailEditItemViewModel`** — Form orchestrator. `IsDirty` is set by name/instruction changes and child VM events; reset on successful save. `_isDirty` is set via backing field in the constructor to prevent dirty-marking during initial population. Fires typed events upward (`SaveCocktailClicked`, `OnDeleteCocktailClicked`); parent owns all DB calls.
 
 **`CocktailIngredientViewModel`** — Ingredient row, no infrastructure dependencies. Fires events upward: `OnChanged`, `OnNavigationIconClicked(vm, moveDown)`, `OnDeleteClicked`, `OnValidationChanged`, `OnDuplicateCheckNeeded`. `IsFirst` is maintained by the parent on every `CollectionChanged` (parent iterates and sets `Ingredients[i].IsFirst = i == 0`).
+
+**`IngredientFilterViewModel`** — Pure display wrapper for the cocktail browser's ingredient type filter (PD-010). Carries `Id`, `Name`, and a bindable `IsSelected` bool; fires a parameterless `SelectionChanged` event on change. No infrastructure dependencies. Each row owns its own selection state rather than relying on Avalonia's `ListBox.SelectedItems`, which is not directly bindable — this is the same direct-event child-VM pattern used throughout the app rather than a new one.
 
 ### Child VM Validation Patterns
 
@@ -300,7 +305,6 @@ Configured in `App.axaml.cs` → `OnFrameworkInitializationCompleted()`.
 - `IAvailabilityService`, `ICocktailService`, `IBottleService`, `IIngredientService` — all `Scoped` to match `DbContext` lifetime; avoids captured-dependency bugs that would occur with `Singleton`
 - `IDialogService` — `Singleton` (stateless UI service)
 - ViewModels — `Transient` (new instance per navigation)
-- `DisableAvaloniaDataAnnotationValidation()` is called to prevent duplicate validation errors — CommunityToolkit.Mvvm owns validation entirely via `[NotifyDataErrorInfo]` on `ObservableValidator`.
 
 ---
 
