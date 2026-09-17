@@ -54,7 +54,7 @@
                                 <!-- ReSharper disable once Xaml.PossibleNullReferenceException -->
                                 <AutoCompleteBox Grid.Column="3"
                                                  ItemsSource="{Binding #IngredientList.((vm:CocktailEditItemViewModel)DataContext).IngredientTypeNames}"
-                                                 Text="{Binding Name, Mode=TwoWay}"
+                                                 Text="{Binding Name}"
                                                  FilterMode="ContainsOrdinal"
                                                  MinimumPrefixLength="0"
                                                  HorizontalAlignment="Stretch"

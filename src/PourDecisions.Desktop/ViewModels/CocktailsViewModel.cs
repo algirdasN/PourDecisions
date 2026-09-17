@@ -30,6 +30,8 @@ public partial class CocktailsViewModel(
     [ObservableProperty]
     private string _ingredientSearchText = string.Empty;
 
+    private bool _isUpdating;
+
     [ObservableProperty]
     private string _nameSearchText = string.Empty;
 
@@ -118,6 +120,11 @@ public partial class CocktailsViewModel(
 
     private void FilterCocktails()
     {
+        if (_isUpdating)
+        {
+            return;
+        }
+
         FilteredCocktails = _allCocktails
             .Where(vm =>
                 (!ShowAvailableOnly || vm.AvailabilityStatus == AvailabilityStatus.Available)
@@ -143,20 +150,29 @@ public partial class CocktailsViewModel(
     [RelayCommand]
     private void ClearFilters()
     {
+        _isUpdating = true;
+
         NameSearchText = string.Empty;
         ShowAvailableOnly = false;
         ShowFavoriteOnly = false;
+
+        _isUpdating = false;
+
         ClearIngredientFilters();
     }
 
     [RelayCommand]
     private void ClearIngredientFilters()
     {
+        _isUpdating = true;
+
         IngredientSearchText = string.Empty;
         foreach (var ingredient in _allTrackedIngredients)
         {
             ingredient.IsSelected = false;
         }
+
+        _isUpdating = false;
 
         OnIngredientSelectionChanged();
     }
@@ -173,6 +189,11 @@ public partial class CocktailsViewModel(
 
     private void OnIngredientSelectionChanged()
     {
+        if (_isUpdating)
+        {
+            return;
+        }
+
         var text = string.Join(", ", _allTrackedIngredients.Where(vm => vm.IsSelected).Select(vm => vm.Name));
         SelectedIngredientsText = string.IsNullOrWhiteSpace(text)
             ? "Select ingredients..."
