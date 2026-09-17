@@ -80,24 +80,27 @@ Detail view is the right panel of the master/detail layout implemented in PD-003
 
 ---
 
-### PD-010 · Filter Cocktails by Ingredient Type
+### PD-010 · Filter Cocktails by Ingredient Type ✅
 **Priority:** P2 — after inventory management is in place (depends on tracked ingredient types existing)
 
 **Goal:** Allow the user to filter the cocktail browser by one or more ingredient types, so they can answer "what can I make with my gin?"
 
 **Acceptance criteria:**
-- A multi-select control (e.g. `ListBox` with multiple selection, or a dropdown with checkboxes) shows all tracked `IngredientType` records
-- Selecting one or more types filters the cocktail list to show only cocktails that use **at least one** of the selected types as a required ingredient
-- Filter is combinable with existing search, Available only, and Favorites only filters
+- A filterable checkbox list (search box + `ItemsControl` of checkboxes, presented in a `DropDownButton` flyout) shows all tracked `IngredientType` records that are used by at least one cocktail
+- Selecting one or more types filters the cocktail list to show only cocktails that use **every** selected type as a required ingredient (superset match — corrected from the original "at least one" wording, which didn't match the intended "what can I make with what I have" use case)
+- Filter is combinable with existing search, Available only, and Favorites only filters via AND logic
+- Filter is intentionally independent of inventory/availability status — a type can be selected whether or not the user currently owns a bottle of it, to support future use cases like "what am I missing for this recipe" (see Post-MVP shopping list item)
 - Selecting no types is equivalent to no filter (all cocktails shown)
-- "Clear filters" action resets ingredient type selection alongside other filters
-- Ingredient type list is loaded fresh on page activation alongside cocktails (same `LoadAsync` call)
+- Ingredient search text filters which checkboxes are visible without affecting their `IsSelected` state
+- A dedicated "Clear" action inside the flyout resets ingredient type selection and search text; the page-level "Clear filters" action resets this alongside name search, Available only, and Favorites only
+- Ingredient type list is derived from the already-loaded cocktail graph on page activation — no separate query
 
-**Notes:**
-- Ingredient types should be loaded via a new `ICocktailService.GetTrackedIngredientTypesAsync()` method (or equivalent query service) — do not load them from the summary VMs
-- Filter logic lives in `FilterCocktails()` on `CocktailsViewModel` alongside existing filter predicates
-- Multi-select in Avalonia uses `ListBox` with `SelectionMode="Multiple"` — binding selected items requires care; `SelectedItems` is not directly bindable in Avalonia, so an `SelectionChanged` event handler or a wrapper approach will be needed
-- Consider whether untracked types should appear — they shouldn't, since untracked types are assumed always available and filtering by them would be meaningless
+**Implementation notes:**
+- Ingredient types are **not** loaded via a separate service call. They're derived client-side from `_allCocktails` (`SelectMany` over each cocktail's tracked `CocktailIngredient.Type`, `Distinct`, ordered alphabetically) inside `CocktailsViewModel.LoadAsync`. This is deliberately better than a dedicated `GetTrackedIngredientTypesAsync()` query: a tracked type with zero cocktails using it would be a useless filter option (it could never narrow results), so deriving from actual recipe usage is the correct behaviour, not just a shortcut. It also avoids a third concurrent query in `LoadAsync`.
+- Matching is **ID-based** (`CocktailIngredient.TypeId`), not name-based — consistent with how `AvailabilityCalculator` and the rest of the app treat ingredient identity, and avoids fragility if type renames (PD-009a) are added later.
+- New `IngredientFilterViewModel` (`Id`, `Name`, bindable `IsSelected`, `SelectionChanged` event) — a pure display wrapper with no infrastructure dependencies, following the same direct-event child-VM pattern as `CocktailIngredientViewModel` and `CocktailSummaryViewModel`. Avoids the `ListBox.SelectedItems` binding limitation in Avalonia entirely, since each row owns its own bindable bool rather than relying on control-level multi-selection state.
+- `CocktailsViewModel` guards against redundant `FilterCocktails()` calls during bulk-clear operations (`ClearFilters`, `ClearIngredientFilters`) with an `_isUpdating` bool set around the batch mutation, since each `IsSelected = false` in the clear loop would otherwise independently trigger a refilter.
+- UI: `DropDownButton` with a `Flyout` containing a search `TextBox` + `Clear` button + scrollable checkbox list. Flyout width bound to the button's own width via style setter so it doesn't clip/float independently.
 
 ---
 
