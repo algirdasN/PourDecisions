@@ -6,6 +6,8 @@ namespace PourDecisions.Desktop.ViewModels;
 
 public partial class ModifyIngredientTypeViewModel(IngredientType ingredientType) : ViewModelBase
 {
+    public Func<ModifyIngredientTypeViewModel, bool, Task<bool>>? RequestTrackedChange;
+    private bool _isUpdating;
     public int Id { get; } = ingredientType.Id;
 
     [ObservableProperty]
@@ -14,23 +16,43 @@ public partial class ModifyIngredientTypeViewModel(IngredientType ingredientType
     [ObservableProperty]
     public partial bool IsTracked { get; set; } = ingredientType.IsTracked;
 
-    public event Action<int>? RenameButtonClicked;
-    public event Action<int>? DeleteButtonClicked;
-
-    [RelayCommand]
-    private void ToggleTracked()
-    {
-    }
+    public event Action<ModifyIngredientTypeViewModel>? RenameButtonClicked;
+    public event Action<ModifyIngredientTypeViewModel>? DeleteButtonClicked;
 
     [RelayCommand]
     private void Rename()
     {
-        RenameButtonClicked?.Invoke(Id);
+        RenameButtonClicked?.Invoke(this);
     }
 
     [RelayCommand]
     private void Delete()
     {
-        DeleteButtonClicked?.Invoke(Id);
+        DeleteButtonClicked?.Invoke(this);
+    }
+
+    partial void OnIsTrackedChanged(bool oldValue, bool newValue)
+    {
+        if (_isUpdating)
+        {
+            return;
+        }
+
+        _ = RequestTrackedChangeAsync(oldValue, newValue);
+    }
+
+    private async Task RequestTrackedChangeAsync(bool oldValue, bool newValue)
+    {
+        if (RequestTrackedChange is null)
+        {
+            return;
+        }
+
+        if (!await RequestTrackedChange.Invoke(this, newValue))
+        {
+            _isUpdating = true;
+            IsTracked = oldValue;
+            _isUpdating = false;
+        }
     }
 }

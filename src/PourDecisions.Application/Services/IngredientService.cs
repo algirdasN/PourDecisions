@@ -30,9 +30,11 @@ public interface IIngredientService
     /// <summary>
     /// Asynchronously renames an ingredient type.
     /// </summary>
-    /// <param name="ingredientTypeId">The ID of the ingredient type to rename</param>
+    /// <param name="id">The ID of the ingredient type to rename</param>
     /// <param name="newName">New name of the ingredient type.</param>
-    Task RenameIngredientAsync(int ingredientTypeId, string newName);
+    Task RenameIngredientAsync(int id, string newName);
+
+    Task UpdateIngredientTypeTrackedWithBottleCleanupAsync(int id, bool newValue);
 
     /// <summary>
     /// Asynchronously deletes an ingredient type by its ID.
@@ -78,14 +80,33 @@ public class IngredientService(CocktailDbContext cocktailDbContext) : IIngredien
     }
 
     /// <inheritdoc/>
-    public async Task RenameIngredientAsync(int ingredientTypeId, string newName)
+    public async Task RenameIngredientAsync(int id, string newName)
     {
         var ingredientType = await cocktailDbContext.IngredientTypes
-            .FirstOrDefaultAsync(type => type.Id == ingredientTypeId);
+            .FirstOrDefaultAsync(type => type.Id == id);
 
         if (ingredientType != null)
         {
             ingredientType.Name = newName;
+            await cocktailDbContext.SaveChangesAsync();
+        }
+    }
+
+    public async Task UpdateIngredientTypeTrackedWithBottleCleanupAsync(int id, bool newValue)
+    {
+        var ingredientType = await cocktailDbContext.IngredientTypes
+            .FirstOrDefaultAsync(type => type.Id == id);
+
+        if (ingredientType != null)
+        {
+            ingredientType.IsTracked = newValue;
+
+            if (!newValue)
+            {
+                var bottles = await cocktailDbContext.Bottles.Where(b => b.TypeId == id).ToListAsync();
+                cocktailDbContext.Bottles.RemoveRange(bottles);
+            }
+
             await cocktailDbContext.SaveChangesAsync();
         }
     }

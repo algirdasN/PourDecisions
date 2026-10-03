@@ -55,7 +55,8 @@ public class DialogService : IDialogService
         {
             Title = title,
             Content = message,
-            CloseButtonText = "Close"
+            CloseButtonText = "Close",
+            DefaultButton = FAContentDialogButton.Close
         };
 
         return await dialog.ShowAsync();
@@ -70,7 +71,8 @@ public class DialogService : IDialogService
             Title = title,
             Content = message,
             PrimaryButtonText = primaryButtonText,
-            CloseButtonText = closeButtonText
+            CloseButtonText = closeButtonText,
+            DefaultButton = FAContentDialogButton.Primary
         };
 
         return await dialog.ShowAsync();
@@ -88,7 +90,8 @@ public class DialogService : IDialogService
             Title = title,
             Content = new InputDialogView { DataContext = vm },
             PrimaryButtonText = primaryButtonText,
-            CloseButtonText = closeButtonText
+            CloseButtonText = closeButtonText,
+            DefaultButton = FAContentDialogButton.Primary
         };
 
         dialog.PrimaryButtonClick += (sender, args) =>

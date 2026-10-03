@@ -35,7 +35,6 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0" Text="{Binding Name}" />
                                     <CheckBox Grid.Column="1" IsChecked="{Binding IsTracked}"
-                                              Command="{Binding ToggleTrackedCommand}"
                                               HorizontalAlignment="Center" />
                                     <Grid Grid.Column="2" ColumnDefinitions="Auto, Auto">
                                         <Button Grid.Column="0" Content="Rename" Command="{Binding RenameCommand}" />

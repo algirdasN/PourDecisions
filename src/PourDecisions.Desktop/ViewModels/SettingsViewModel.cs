@@ -33,7 +33,10 @@ public partial class SettingsViewModel(
         IngredientTypes = (await ingredientService.GetIngredientTypesAsync())
             .Select(ingredientType =>
             {
-                var vm = new ModifyIngredientTypeViewModel(ingredientType);
+                var vm = new ModifyIngredientTypeViewModel(ingredientType)
+                {
+                    RequestTrackedChange = ChangeIngredientTrackedStatus
+                };
                 vm.RenameButtonClicked += OnRenameButtonClicked;
                 vm.DeleteButtonClicked += OnDeleteButtonClicked;
                 return vm;
@@ -44,18 +47,49 @@ public partial class SettingsViewModel(
         _cocktails = await cocktailsTask;
     }
 
-    private void OnRenameButtonClicked(int ingredientTypeId)
+    private async Task<bool> ChangeIngredientTrackedStatus(ModifyIngredientTypeViewModel ingredientVm, bool newValue)
     {
-        _ = RenameIngredientType(ingredientTypeId);
+        if (!newValue)
+        {
+            var bottlesWithIngredient = _bottles.Where(bottle => bottle.Type.Id == ingredientVm.Id).ToList();
+
+            if (bottlesWithIngredient.Count > 0)
+            {
+                var result = await dialogService.ShowConfirmationDialogAsync("Set ingredient type to untracked",
+                    $"""
+                     Confirm setting {ingredientVm.Name} to untracked. The following bottles will be deleted:
+                     {string.Join(Environment.NewLine, bottlesWithIngredient.Select(b => $" - {b.Name} ({b.Volume} ml)"))}
+                     """,
+                    "Confirm", "Cancel");
+
+                if (result != FAContentDialogResult.Primary)
+                {
+                    return false;
+                }
+            }
+        }
+
+        try
+        {
+            await ingredientService.UpdateIngredientTypeTrackedWithBottleCleanupAsync(ingredientVm.Id, newValue);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            await dialogService.ShowInformationDialogAsync("Failed to change tracked status", ex.Message);
+            return false;
+        }
     }
 
-    private async Task RenameIngredientType(int ingredientTypeId)
+    private void OnRenameButtonClicked(ModifyIngredientTypeViewModel ingredientVm)
     {
-        var ingredient = IngredientTypes.First(ingredientType => ingredientType.Id == ingredientTypeId);
+        _ = RenameIngredientType(ingredientVm);
+    }
 
+    private async Task RenameIngredientType(ModifyIngredientTypeViewModel ingredientVm)
+    {
         var newName = await dialogService.ShowInputDialogAsync("Rename ingredient type", "Enter new name:", "Confirm",
-            "Cancel",
-            ingredient.Name, BuildIngredientNameValidator(ingredient.Name));
+            "Cancel", ingredientVm.Name, BuildIngredientNameValidator(ingredientVm.Name));
 
         if (newName is null)
         {
@@ -64,9 +98,9 @@ public partial class SettingsViewModel(
 
         try
         {
-            await ingredientService.RenameIngredientAsync(ingredientTypeId, newName);
+            await ingredientService.RenameIngredientAsync(ingredientVm.Id, newName);
 
-            ingredient.Name = newName;
+            ingredientVm.Name = newName;
         }
         catch (Exception e)
         {
@@ -74,15 +108,15 @@ public partial class SettingsViewModel(
         }
     }
 
-    private void OnDeleteButtonClicked(int ingredientTypeId)
+    private void OnDeleteButtonClicked(ModifyIngredientTypeViewModel ingredientVm)
     {
-        _ = DeleteIngredientType(ingredientTypeId);
+        _ = DeleteIngredientType(ingredientVm);
     }
 
-    private async Task DeleteIngredientType(int ingredientTypeId)
+    private async Task DeleteIngredientType(ModifyIngredientTypeViewModel ingredientVm)
     {
         var cocktailsWithIngredient = _cocktails
-            .Where(cocktail => cocktail.CocktailIngredients.Any(i => i.TypeId == ingredientTypeId))
+            .Where(cocktail => cocktail.CocktailIngredients.Any(i => i.TypeId == ingredientVm.Id))
             .ToList();
 
         if (cocktailsWithIngredient.Count > 0)
@@ -90,18 +124,18 @@ public partial class SettingsViewModel(
             await dialogService.ShowInformationDialogAsync("Cannot delete ingredient type",
                 $"""
                  This ingredient type is used in one or more cocktails:
-                 {string.Join(", ", cocktailsWithIngredient.Select(c => c.Name))}
+                 {string.Join(Environment.NewLine, cocktailsWithIngredient.Select(c => $" - {c.Name}"))}
                  """);
 
             return;
         }
 
-        var bottlesWithIngredient = _bottles.Where(bottle => bottle.TypeId == ingredientTypeId).ToList();
+        var bottlesWithIngredient = _bottles.Where(bottle => bottle.TypeId == ingredientVm.Id).ToList();
 
         var message = bottlesWithIngredient.Count > 0
             ? $"""
                Confirm ingredient type deletion. The following bottles will also be deleted:
-               {string.Join(", ", bottlesWithIngredient.Select(b => $"{b.Name} ({b.Volume} ml)"))}
+               {string.Join(Environment.NewLine, bottlesWithIngredient.Select(b => $" - {b.Name} ({b.Volume} ml)"))}
                """
             : "Confirm ingredient type deletion.";
 
@@ -115,9 +149,9 @@ public partial class SettingsViewModel(
 
         try
         {
-            await ingredientService.DeleteIngredientTypeAsync(ingredientTypeId);
+            await ingredientService.DeleteIngredientTypeAsync(ingredientVm.Id);
 
-            IngredientTypes.Remove(IngredientTypes.First(type => type.Id == ingredientTypeId));
+            IngredientTypes.Remove(IngredientTypes.First(type => type.Id == ingredientVm.Id));
         }
         catch (Exception e)
         {
