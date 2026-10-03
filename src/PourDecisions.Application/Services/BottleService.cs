@@ -23,6 +23,12 @@ public interface IBottleService
     /// <param name="fillLevel">The current fill level of the bottle.</param>
     /// <returns>The newly created <see cref="Bottle"/> entity.</returns>
     Task<Bottle> AddBottleAsync(string typeName, string bottleName, int volume, FillLevel fillLevel);
+    
+    /// <summary>
+    /// Asynchronously retrieves all bottles.
+    /// </summary>
+    /// <returns>A list of all <see cref="Bottle"/> entities.</returns>
+    Task<List<Bottle>> GetAllBottlesAsync();
 
     /// <summary>
     /// Asynchronously retrieves all bottles with their associated ingredient type information.
@@ -83,6 +89,12 @@ public class BottleService(CocktailDbContext cocktailDbContext) : IBottleService
         await cocktailDbContext.SaveChangesAsync();
 
         return bottle;
+    }
+
+    /// <inheritdoc/>
+    public async Task<List<Bottle>> GetAllBottlesAsync()
+    {
+        return await cocktailDbContext.Bottles.ToListAsync();
     }
 
     /// <inheritdoc/>

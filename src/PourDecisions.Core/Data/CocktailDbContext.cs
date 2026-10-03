@@ -23,5 +23,11 @@ public class CocktailDbContext(DbContextOptions<CocktailDbContext> options) : Db
         modelBuilder.Entity<CocktailIngredient>()
             .Property(ci => ci.AmountUnit)
             .HasConversion<string>();
+        
+        modelBuilder.Entity<CocktailIngredient>()
+            .HasOne<IngredientType>(ci => ci.Type)
+            .WithMany(it => it.CocktailIngredients)
+            .HasForeignKey(ci => ci.TypeId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

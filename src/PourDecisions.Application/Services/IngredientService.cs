@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using PourDecisions.Core.Data;
+using PourDecisions.Core.Entities;
 
 namespace PourDecisions.Application.Services;
 
@@ -8,6 +9,12 @@ namespace PourDecisions.Application.Services;
 /// </summary>
 public interface IIngredientService
 {
+    /// <summary>
+    /// Asynchronously retrieves all ingredient types along with their associated bottles in alphabetical order.
+    /// </summary>
+    /// <returns>A sorted list of all ingredients with bottles.</returns>
+    Task<List<IngredientType>> GetIngredientTypesAsync();
+
     /// <summary>
     /// Asynchronously retrieves the names of all ingredient types in alphabetical order.
     /// </summary>
@@ -19,6 +26,12 @@ public interface IIngredientService
     /// </summary>
     /// <returns>A sorted list of tracked ingredient type names.</returns>
     Task<List<string>> GetTrackedIngredientTypeNamesAsync();
+
+    /// <summary>
+    /// Asynchronously deletes an ingredient type by its ID.
+    /// </summary>
+    /// <param name="id">The ID of the ingredient type to delete.</param>
+    Task DeleteIngredientTypeAsync(int id);
 }
 
 /// <summary>
@@ -30,6 +43,14 @@ public interface IIngredientService
 /// </remarks>
 public class IngredientService(CocktailDbContext cocktailDbContext) : IIngredientService
 {
+    /// <inheritdoc/>
+    public async Task<List<IngredientType>> GetIngredientTypesAsync()
+    {
+        return await cocktailDbContext.IngredientTypes
+            .OrderBy(type => type.Name)
+            .ToListAsync();
+    }
+
     /// <inheritdoc/>
     public async Task<List<string>> GetIngredientTypeNamesAsync()
     {
@@ -47,5 +68,18 @@ public class IngredientService(CocktailDbContext cocktailDbContext) : IIngredien
             .Select(type => type.Name)
             .OrderBy(name => name)
             .ToListAsync();
+    }
+
+    /// <inheritdoc/>
+    public async Task DeleteIngredientTypeAsync(int id)
+    {
+        var ingredientType = await cocktailDbContext.IngredientTypes
+            .FirstOrDefaultAsync(type => type.Id == id);
+
+        if (ingredientType != null)
+        {
+            cocktailDbContext.IngredientTypes.Remove(ingredientType);
+            await cocktailDbContext.SaveChangesAsync();
+        }
     }
 }
