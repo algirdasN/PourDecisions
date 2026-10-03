@@ -34,6 +34,11 @@ public interface IIngredientService
     /// <param name="newName">New name of the ingredient type.</param>
     Task RenameIngredientAsync(int id, string newName);
 
+    /// <summary>
+    /// Asynchronously updates the tracked status of an ingredient type and performs cleanup of associated bottles if necessary.
+    /// </summary>
+    /// <param name="id">The unique identifier of the ingredient type to update.</param>
+    /// <param name="newValue">The new tracked status value to set for the ingredient type.</param>
     Task UpdateIngredientTypeTrackedWithBottleCleanupAsync(int id, bool newValue);
 
     /// <summary>
@@ -92,6 +97,7 @@ public class IngredientService(CocktailDbContext cocktailDbContext) : IIngredien
         }
     }
 
+    /// <inheritdoc/>
     public async Task UpdateIngredientTypeTrackedWithBottleCleanupAsync(int id, bool newValue)
     {
         var ingredientType = await cocktailDbContext.IngredientTypes
