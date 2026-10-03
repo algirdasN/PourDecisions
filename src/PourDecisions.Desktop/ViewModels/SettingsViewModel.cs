@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using CommunityToolkit.Mvvm.ComponentModel;
 using FluentAvalonia.UI.Controls;
@@ -45,7 +46,32 @@ public partial class SettingsViewModel(
 
     private void OnRenameButtonClicked(int ingredientTypeId)
     {
-        
+        _ = RenameIngredientType(ingredientTypeId);
+    }
+
+    private async Task RenameIngredientType(int ingredientTypeId)
+    {
+        var ingredient = IngredientTypes.First(ingredientType => ingredientType.Id == ingredientTypeId);
+
+        var newName = await dialogService.ShowInputDialogAsync("Rename ingredient type", "Enter new name:", "Confirm",
+            "Cancel",
+            ingredient.Name, BuildIngredientNameValidator(ingredient.Name));
+
+        if (newName is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await ingredientService.RenameIngredientAsync(ingredientTypeId, newName);
+
+            ingredient.Name = newName;
+        }
+        catch (Exception e)
+        {
+            await dialogService.ShowInformationDialogAsync("Failed to rename ingredient type", e.Message);
+        }
     }
 
     private void OnDeleteButtonClicked(int ingredientTypeId)
@@ -97,5 +123,28 @@ public partial class SettingsViewModel(
         {
             await dialogService.ShowInformationDialogAsync("Failed to delete ingredient type", e.Message);
         }
+    }
+
+    private Func<string, ValidationResult?> BuildIngredientNameValidator(string ingredientName)
+    {
+        return value =>
+        {
+            if (value.Length < 3)
+            {
+                return new ValidationResult("Ingredient type name must be at least 3 characters long.");
+            }
+
+            if (value == ingredientName)
+            {
+                return new ValidationResult("Enter a new ingredient type name.");
+            }
+
+            if (IngredientTypes.Any(type => type.Name.Equals(value, StringComparison.OrdinalIgnoreCase)))
+            {
+                return new ValidationResult("Ingredient type name is already in use.");
+            }
+
+            return ValidationResult.Success;
+        };
     }
 }

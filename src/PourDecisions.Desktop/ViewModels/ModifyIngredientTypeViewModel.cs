@@ -8,7 +8,8 @@ public partial class ModifyIngredientTypeViewModel(IngredientType ingredientType
 {
     public int Id { get; } = ingredientType.Id;
 
-    public string Name { get; } = ingredientType.Name;
+    [ObservableProperty]
+    public partial string Name { get; set; } = ingredientType.Name;
 
     [ObservableProperty]
     public partial bool IsTracked { get; set; } = ingredientType.IsTracked;

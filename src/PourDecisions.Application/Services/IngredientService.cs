@@ -28,6 +28,13 @@ public interface IIngredientService
     Task<List<string>> GetTrackedIngredientTypeNamesAsync();
 
     /// <summary>
+    /// Asynchronously renames an ingredient type.
+    /// </summary>
+    /// <param name="ingredientTypeId">The ID of the ingredient type to rename</param>
+    /// <param name="newName">New name of the ingredient type.</param>
+    Task RenameIngredientAsync(int ingredientTypeId, string newName);
+
+    /// <summary>
     /// Asynchronously deletes an ingredient type by its ID.
     /// </summary>
     /// <param name="id">The ID of the ingredient type to delete.</param>
@@ -68,6 +75,19 @@ public class IngredientService(CocktailDbContext cocktailDbContext) : IIngredien
             .Select(type => type.Name)
             .OrderBy(name => name)
             .ToListAsync();
+    }
+
+    /// <inheritdoc/>
+    public async Task RenameIngredientAsync(int ingredientTypeId, string newName)
+    {
+        var ingredientType = await cocktailDbContext.IngredientTypes
+            .FirstOrDefaultAsync(type => type.Id == ingredientTypeId);
+
+        if (ingredientType != null)
+        {
+            ingredientType.Name = newName;
+            await cocktailDbContext.SaveChangesAsync();
+        }
     }
 
     /// <inheritdoc/>

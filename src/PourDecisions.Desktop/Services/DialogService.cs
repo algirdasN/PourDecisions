@@ -1,4 +1,7 @@
+using System.ComponentModel.DataAnnotations;
 using FluentAvalonia.UI.Controls;
+using PourDecisions.Desktop.ViewModels;
+using PourDecisions.Desktop.Views;
 
 namespace PourDecisions.Desktop.Services;
 
@@ -25,6 +28,19 @@ public interface IDialogService
     /// <returns>A <see cref="FAContentDialogResult"/> representing the user's choice.</returns>
     Task<FAContentDialogResult> ShowConfirmationDialogAsync(string title, string message, string primaryButtonText,
         string closeButtonText);
+
+    /// <summary>
+    /// Asynchronously displays an input dialog that allows the user to enter a value, with optional validation.
+    /// </summary>
+    /// <param name="title">The title of the dialog.</param>
+    /// <param name="message">The message displayed to the user in the dialog.</param>
+    /// <param name="primaryButtonText">The text for the primary action button.</param>
+    /// <param name="closeButtonText">The text for the close button.</param>
+    /// <param name="initialValue">The initial value to populate the input field. Defaults to an empty string.</param>
+    /// <param name="validator"> A function to validate the user's input. Defaults to null.</param>
+    /// <returns>The value entered by the user, or null if the dialog was canceled.</returns>
+    Task<string?> ShowInputDialogAsync(string title, string message, string primaryButtonText,
+        string closeButtonText, string initialValue = "", Func<string, ValidationResult?>? validator = null);
 }
 
 /// <summary>
@@ -58,5 +74,33 @@ public class DialogService : IDialogService
         };
 
         return await dialog.ShowAsync();
+    }
+
+    /// <inheritdoc/>
+    public async Task<string?> ShowInputDialogAsync(string title, string message,
+        string primaryButtonText, string closeButtonText, string initialValue = "",
+        Func<string, ValidationResult?>? validator = null)
+    {
+        var vm = new InputDialogViewModel(message, initialValue, validator);
+
+        var dialog = new FAContentDialog
+        {
+            Title = title,
+            Content = new InputDialogView { DataContext = vm },
+            PrimaryButtonText = primaryButtonText,
+            CloseButtonText = closeButtonText
+        };
+
+        dialog.PrimaryButtonClick += (sender, args) =>
+        {
+            if (vm.HasValidationError())
+            {
+                args.Cancel = true;
+            }
+        };
+
+        return await dialog.ShowAsync() == FAContentDialogResult.Primary
+            ? vm.Value
+            : null;
     }
 }
