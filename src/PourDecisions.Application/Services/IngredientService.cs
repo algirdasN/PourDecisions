@@ -11,9 +11,9 @@ namespace PourDecisions.Application.Services;
 public interface IIngredientService
 {
     /// <summary>
-    /// Asynchronously retrieves all ingredient types along with their associated bottles in alphabetical order.
+    /// Asynchronously retrieves all ingredient types in alphabetical order.
     /// </summary>
-    /// <returns>A sorted list of all ingredients with bottles.</returns>
+    /// <returns>A sorted list of all ingredients.</returns>
     Task<List<IngredientType>> GetIngredientTypesAsync();
 
     /// <summary>
@@ -88,9 +88,7 @@ public class IngredientService(CocktailDbContext cocktailDbContext) : IIngredien
     /// <inheritdoc/>
     public async Task RenameIngredientAsync(int id, string newName)
     {
-        var ingredientTypes = await cocktailDbContext.IngredientTypes.ToListAsync();
-
-        var ingredientType = ingredientTypes.FirstOrDefault(type => type.Id == id);
+        var ingredientType = await cocktailDbContext.IngredientTypes.FirstOrDefaultAsync(type => type.Id == id);
 
         if (ingredientType is null)
         {
@@ -99,8 +97,8 @@ public class IngredientService(CocktailDbContext cocktailDbContext) : IIngredien
 
         var normalizedName = newName.ToTitleCase();
 
-        var nameExists = ingredientTypes
-            .Any(type => type.Id != id && type.Name.Equals(normalizedName, StringComparison.OrdinalIgnoreCase));
+        var nameExists = await cocktailDbContext.IngredientTypes
+            .AnyAsync(type => type.Id != id && type.Name.Equals(normalizedName, StringComparison.OrdinalIgnoreCase));
 
         if (nameExists)
         {

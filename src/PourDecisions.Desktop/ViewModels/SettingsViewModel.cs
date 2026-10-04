@@ -30,6 +30,12 @@ public partial class SettingsViewModel(
         var bottleTask = bottleService.GetBottlesWithTypeAsync();
         var cocktailsTask = cocktailService.GetAllWithIngredientsAsync();
 
+        foreach (var ingredientVm in IngredientTypes)
+        {
+            ingredientVm.RenameButtonClicked -= OnRenameButtonClicked;
+            ingredientVm.DeleteButtonClicked -= OnDeleteButtonClicked;
+        }
+
         IngredientTypes = (await ingredientService.GetIngredientTypesAsync())
             .Select(ingredientType =>
             {
@@ -72,6 +78,7 @@ public partial class SettingsViewModel(
         try
         {
             await ingredientService.UpdateIngredientTypeTrackedWithBottleCleanupAsync(ingredientVm.Id, newValue);
+            _bottles = await bottleService.GetBottlesWithTypeAsync();
             return true;
         }
         catch (Exception ex)
@@ -101,7 +108,7 @@ public partial class SettingsViewModel(
             await ingredientService.RenameIngredientAsync(ingredientVm.Id, newName);
 
             ingredientVm.Name = newName.ToTitleCase();
-            
+
             IngredientTypes.MoveInSorted(ingredientVm, ModifyIngredientTypeViewModel.NameComparer);
         }
         catch (Exception e)
@@ -170,7 +177,7 @@ public partial class SettingsViewModel(
                 return new ValidationResult("Ingredient type name must be at least 3 characters long.");
             }
 
-            if (value == ingredientName)
+            if (value.Equals(ingredientName, StringComparison.OrdinalIgnoreCase))
             {
                 return new ValidationResult("Enter a new ingredient type name.");
             }

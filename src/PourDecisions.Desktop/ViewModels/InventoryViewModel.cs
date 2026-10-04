@@ -37,11 +37,16 @@ public partial class InventoryViewModel(
         var bottleTask = bottleService.GetBottlesWithTypeAsync();
         var ingredientTypeTask = ingredientService.GetTrackedIngredientTypeNamesAsync();
 
-        await Task.WhenAll(bottleTask, ingredientTypeTask);
+        foreach (var ingredientVm in IngredientTypes)
+        {
+            ingredientVm.AddFormClicked -= OnAddFormClicked;
+            ingredientVm.FillLevelChanged -= OnFillLevelChanged;
+            ingredientVm.DeleteBottleClicked -= OnDeleteButtonClicked;
+        }
 
-        _ingredientTypeNames = ingredientTypeTask.Result;
+        _ingredientTypeNames = await ingredientTypeTask;
 
-        IngredientTypes = bottleTask.Result
+        IngredientTypes = (await bottleTask)
             .GroupBy(bottle => bottle.Type)
             .OrderBy(group => group.Key.Name)
             .Select(group =>
