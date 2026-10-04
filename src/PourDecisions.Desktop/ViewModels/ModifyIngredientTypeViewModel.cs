@@ -6,6 +6,10 @@ namespace PourDecisions.Desktop.ViewModels;
 
 public partial class ModifyIngredientTypeViewModel(IngredientType ingredientType) : ViewModelBase
 {
+    public static readonly Comparer<ModifyIngredientTypeViewModel> NameComparer =
+        Comparer<ModifyIngredientTypeViewModel>.Create((x, y) =>
+            string.Compare(x.Name, y.Name, StringComparison.Ordinal));
+
     public Func<ModifyIngredientTypeViewModel, bool, Task<bool>>? RequestTrackedChange;
     private bool _isUpdating;
     public int Id { get; } = ingredientType.Id;

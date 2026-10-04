@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PourDecisions.Core.Data;
 using PourDecisions.Core.Entities;
+using PourDecisions.Shared.Extensions;
 
 namespace PourDecisions.Application.Services;
 
@@ -87,21 +88,33 @@ public class IngredientService(CocktailDbContext cocktailDbContext) : IIngredien
     /// <inheritdoc/>
     public async Task RenameIngredientAsync(int id, string newName)
     {
-        var ingredientType = await cocktailDbContext.IngredientTypes
-            .FirstOrDefaultAsync(type => type.Id == id);
+        var ingredientTypes = await cocktailDbContext.IngredientTypes.ToListAsync();
 
-        if (ingredientType != null)
+        var ingredientType = ingredientTypes.FirstOrDefault(type => type.Id == id);
+
+        if (ingredientType is null)
         {
-            ingredientType.Name = newName;
-            await cocktailDbContext.SaveChangesAsync();
+            return;
         }
+
+        var normalizedName = newName.ToTitleCase();
+
+        var nameExists = ingredientTypes
+            .Any(type => type.Id != id && type.Name.Equals(normalizedName, StringComparison.OrdinalIgnoreCase));
+
+        if (nameExists)
+        {
+            throw new InvalidOperationException($"Ingredient type '{normalizedName}' already exists.");
+        }
+
+        ingredientType.Name = normalizedName;
+        await cocktailDbContext.SaveChangesAsync();
     }
 
     /// <inheritdoc/>
     public async Task UpdateIngredientTypeTrackedWithBottleCleanupAsync(int id, bool newValue)
     {
-        var ingredientType = await cocktailDbContext.IngredientTypes
-            .FirstOrDefaultAsync(type => type.Id == id);
+        var ingredientType = await cocktailDbContext.IngredientTypes.FirstOrDefaultAsync(type => type.Id == id);
 
         if (ingredientType != null)
         {
@@ -120,8 +133,7 @@ public class IngredientService(CocktailDbContext cocktailDbContext) : IIngredien
     /// <inheritdoc/>
     public async Task DeleteIngredientTypeAsync(int id)
     {
-        var ingredientType = await cocktailDbContext.IngredientTypes
-            .FirstOrDefaultAsync(type => type.Id == id);
+        var ingredientType = await cocktailDbContext.IngredientTypes.FirstOrDefaultAsync(type => type.Id == id);
 
         if (ingredientType != null)
         {

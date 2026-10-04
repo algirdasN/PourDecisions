@@ -90,6 +90,7 @@ public partial class EditCocktailsViewModel(
 
             CocktailEditItemViewModel = null;
             CocktailSummaries[CocktailSummaries.IndexOf(oldSummary)] = newSummary;
+            CocktailSummaries.MoveInSorted(newSummary, CocktailEditSummary.NameComparer);
             SelectedCocktail = newSummary;
         }
         catch (Exception e)

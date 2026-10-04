@@ -27,7 +27,7 @@ public partial class SettingsViewModel(
 
     public async Task LoadAsync()
     {
-        var bottleTask = bottleService.GetAllBottlesAsync();
+        var bottleTask = bottleService.GetBottlesWithTypeAsync();
         var cocktailsTask = cocktailService.GetAllWithIngredientsAsync();
 
         IngredientTypes = (await ingredientService.GetIngredientTypesAsync())
@@ -51,7 +51,7 @@ public partial class SettingsViewModel(
     {
         if (!newValue)
         {
-            var bottlesWithIngredient = _bottles.Where(bottle => bottle.Type.Id == ingredientVm.Id).ToList();
+            var bottlesWithIngredient = _bottles.Where(bottle => bottle.TypeId == ingredientVm.Id).ToList();
 
             if (bottlesWithIngredient.Count > 0)
             {
@@ -100,7 +100,9 @@ public partial class SettingsViewModel(
         {
             await ingredientService.RenameIngredientAsync(ingredientVm.Id, newName);
 
-            ingredientVm.Name = newName;
+            ingredientVm.Name = newName.ToTitleCase();
+            
+            IngredientTypes.MoveInSorted(ingredientVm, ModifyIngredientTypeViewModel.NameComparer);
         }
         catch (Exception e)
         {
