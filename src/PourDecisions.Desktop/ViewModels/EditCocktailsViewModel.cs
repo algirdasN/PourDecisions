@@ -36,14 +36,12 @@ public partial class EditCocktailsViewModel(
 
     public async Task LoadAsync()
     {
-        var cocktailsTask = cocktailService.GetAllSummariesAsync();
-        var ingredientTypeTask = ingredientService.GetIngredientTypeNamesAsync();
+        var cocktails = await cocktailService.GetAllSummariesAsync();
+        var ingredients = await ingredientService.GetIngredientTypeNamesAsync();
 
-        await Task.WhenAll(cocktailsTask, ingredientTypeTask);
+        _ingredientTypeNames = ingredients.ToObservableCollection();
 
-        _ingredientTypeNames = ingredientTypeTask.Result.ToObservableCollection();
-
-        CocktailSummaries = cocktailsTask.Result
+        CocktailSummaries = cocktails
             .Prepend(new CocktailEditSummary(null, "<New Cocktail>", false))
             .ToObservableCollection();
 

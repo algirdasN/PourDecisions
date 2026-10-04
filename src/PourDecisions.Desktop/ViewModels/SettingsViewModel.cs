@@ -27,16 +27,11 @@ public partial class SettingsViewModel(
 
     public async Task LoadAsync()
     {
-        var bottleTask = bottleService.GetBottlesWithTypeAsync();
-        var cocktailsTask = cocktailService.GetAllWithIngredientsAsync();
+        _bottles = await bottleService.GetBottlesWithTypeAsync();
+        _cocktails = await cocktailService.GetAllWithIngredientsAsync();
+        var ingredientTypes = await ingredientService.GetIngredientTypesAsync();
 
-        foreach (var ingredientVm in IngredientTypes)
-        {
-            ingredientVm.RenameButtonClicked -= OnRenameButtonClicked;
-            ingredientVm.DeleteButtonClicked -= OnDeleteButtonClicked;
-        }
-
-        IngredientTypes = (await ingredientService.GetIngredientTypesAsync())
+        IngredientTypes = ingredientTypes
             .Select(ingredientType =>
             {
                 var vm = new ModifyIngredientTypeViewModel(ingredientType)
@@ -48,9 +43,6 @@ public partial class SettingsViewModel(
                 return vm;
             })
             .ToObservableCollection();
-
-        _bottles = await bottleTask;
-        _cocktails = await cocktailsTask;
     }
 
     private async Task<bool> ChangeIngredientTrackedStatus(ModifyIngredientTypeViewModel ingredientVm, bool newValue)
