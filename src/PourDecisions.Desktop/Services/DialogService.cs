@@ -25,9 +25,10 @@ public interface IDialogService
     /// <param name="message">The message describing the action to confirm.</param>
     /// <param name="primaryButtonText">The text for the primary action button.</param>
     /// <param name="closeButtonText">The text for the close or cancel button.</param>
+    /// <param name="defaultButton">The button that is selected by default. Defaults to the primary button.</param>
     /// <returns>A <see cref="FAContentDialogResult"/> representing the user's choice.</returns>
     Task<FAContentDialogResult> ShowConfirmationDialogAsync(string title, string message, string primaryButtonText,
-        string closeButtonText);
+        string closeButtonText, FAContentDialogButton defaultButton = FAContentDialogButton.Primary);
 
     /// <summary>
     /// Asynchronously displays an input dialog that allows the user to enter a value, with optional validation.
@@ -64,7 +65,8 @@ public class DialogService : IDialogService
 
     /// <inheritdoc/>
     public async Task<FAContentDialogResult> ShowConfirmationDialogAsync(string title, string message,
-        string primaryButtonText, string closeButtonText)
+        string primaryButtonText, string closeButtonText,
+        FAContentDialogButton defaultButton = FAContentDialogButton.Primary)
     {
         var dialog = new FAContentDialog
         {
@@ -72,7 +74,7 @@ public class DialogService : IDialogService
             Content = message,
             PrimaryButtonText = primaryButtonText,
             CloseButtonText = closeButtonText,
-            DefaultButton = FAContentDialogButton.Primary
+            DefaultButton = defaultButton
         };
 
         return await dialog.ShowAsync();

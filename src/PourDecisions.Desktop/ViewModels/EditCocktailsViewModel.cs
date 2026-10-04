@@ -170,7 +170,7 @@ public partial class EditCocktailsViewModel(
             var message = $"Are you sure you want to delete cocktail '{cocktailName}'?";
 
             var result = await dialogService.ShowConfirmationDialogAsync("Delete cocktail", message,
-                "Delete", "Cancel");
+                "Delete", "Cancel", FAContentDialogButton.Close);
 
             if (result != FAContentDialogResult.Primary)
             {

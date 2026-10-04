@@ -150,7 +150,8 @@ public partial class InventoryViewModel(
         {
             var message = $"Are you sure you want to delete '{bottleName}' ({typeName})?";
 
-            var result = await dialogService.ShowConfirmationDialogAsync("Delete bottle", message, "Delete", "Cancel");
+            var result = await dialogService.ShowConfirmationDialogAsync("Delete bottle", message, "Delete", "Cancel",
+                FAContentDialogButton.Close);
 
             if (result != FAContentDialogResult.Primary)
             {

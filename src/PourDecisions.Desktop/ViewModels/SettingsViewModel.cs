@@ -58,7 +58,7 @@ public partial class SettingsViewModel(
                      Confirm setting {ingredientVm.Name} to untracked. The following bottles will be deleted:
                      {string.Join(Environment.NewLine, bottlesWithIngredient.Select(b => $" - {b.Name} ({b.Volume} ml)"))}
                      """,
-                    "Confirm", "Cancel");
+                    "Confirm", "Cancel", FAContentDialogButton.Close);
 
                 if (result != FAContentDialogResult.Primary)
                 {
@@ -140,8 +140,8 @@ public partial class SettingsViewModel(
                """
             : "Confirm ingredient type deletion.";
 
-        var dialogResult =
-            await dialogService.ShowConfirmationDialogAsync("Delete ingredient type", message, "Delete", "Cancel");
+        var dialogResult = await dialogService.ShowConfirmationDialogAsync("Delete ingredient type", message, "Delete",
+            "Cancel", FAContentDialogButton.Close);
 
         if (dialogResult != FAContentDialogResult.Primary)
         {
