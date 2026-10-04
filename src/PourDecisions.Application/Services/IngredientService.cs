@@ -37,26 +37,27 @@ public interface IIngredientService
     Task RenameIngredientAsync(int id, string newName);
 
     /// <summary>
+    /// Asynchronously previews the impact of modifying an ingredient type.
+    /// Retrieves a list of cocktails and bottles associated with the specified ingredient type.
+    /// </summary>
+    /// <param name="id">The unique identifier of the ingredient type to preview modification for.</param>
+    /// <returns>A data object containing the names of cocktails using the ingredient type and a list of associated bottles, if any.</returns>
+    Task<IngredientTypeModifyImpact> PreviewIngredientTypeModifyAsync(int id);
+
+    /// <summary>
     /// Asynchronously updates the tracked status of an ingredient type and performs cleanup of associated bottles if necessary.
     /// </summary>
     /// <param name="id">The unique identifier of the ingredient type to update.</param>
     /// <param name="newValue">The new tracked status value to set for the ingredient type.</param>
-    Task UpdateIngredientTypeTrackedWithBottleCleanupAsync(int id, bool newValue);
-
-    /// <summary>
-    /// Asynchronously previews the impact of deleting an ingredient type.
-    /// Retrieves a list of cocktails and bottles associated with the specified ingredient type.
-    /// </summary>
-    /// <param name="id">The unique identifier of the ingredient type to preview deletion for.</param>
-    /// <returns>A data object containing the names of cocktails using the ingredient type and a list of associated bottles, if any.</returns>
-    Task<IngredientTypeDeleteImpact> PreviewDeleteIngredientTypeAsync(int id);
+    /// <param name="allowWithBottles">Whether to allow updating of ingredient types that have associated bottles.</param>
+    Task UpdateIngredientTypeTrackedAsync(int id, bool newValue, bool allowWithBottles = false);
 
     /// <summary>
     /// Asynchronously deletes an ingredient type by its ID.
     /// </summary>
     /// <param name="id">The ID of the ingredient type to delete.</param>
-    /// <param name="allowDeleteWithBottles">Whether to allow deletion of ingredient types that have associated bottles.</param>
-    Task DeleteIngredientTypeAsync(int id, bool allowDeleteWithBottles = false);
+    /// <param name="allowWithBottles">Whether to allow deletion of ingredient types that have associated bottles.</param>
+    Task DeleteIngredientTypeAsync(int id, bool allowWithBottles = false);
 }
 
 /// <summary>
@@ -120,25 +121,7 @@ public class IngredientService(CocktailDbContext cocktailDbContext) : IIngredien
     }
 
     /// <inheritdoc/>
-    public async Task UpdateIngredientTypeTrackedWithBottleCleanupAsync(int id, bool newValue)
-    {
-        var ingredientType = await cocktailDbContext.IngredientTypes.FirstOrDefaultAsync(type => type.Id == id);
-
-        if (ingredientType != null)
-        {
-            ingredientType.IsTracked = newValue;
-
-            if (!newValue)
-            {
-                var bottles = await cocktailDbContext.Bottles.Where(b => b.TypeId == id).ToListAsync();
-                cocktailDbContext.Bottles.RemoveRange(bottles);
-            }
-
-            await cocktailDbContext.SaveChangesAsync();
-        }
-    }
-
-    public async Task<IngredientTypeDeleteImpact> PreviewDeleteIngredientTypeAsync(int id)
+    public async Task<IngredientTypeModifyImpact> PreviewIngredientTypeModifyAsync(int id)
     {
         var cocktailsWithIngredient = await cocktailDbContext.Cocktails
             .Where(cocktail => cocktail.CocktailIngredients.Any(i => i.TypeId == id))
@@ -148,7 +131,7 @@ public class IngredientService(CocktailDbContext cocktailDbContext) : IIngredien
             .Where(bottle => bottle.TypeId == id)
             .ToListAsync();
 
-        return new IngredientTypeDeleteImpact
+        return new IngredientTypeModifyImpact
         {
             CocktailNames = cocktailsWithIngredient.Select(c => c.Name).ToList(),
             BottleInfoList = bottlesWithIngredient.Select(b => $"{b.Name} ({b.Volume} ml)").ToList()
@@ -156,25 +139,58 @@ public class IngredientService(CocktailDbContext cocktailDbContext) : IIngredien
     }
 
     /// <inheritdoc/>
-    public async Task DeleteIngredientTypeAsync(int id, bool allowDeleteWithBottles = false)
+    public async Task UpdateIngredientTypeTrackedAsync(int id, bool newValue, bool allowWithBottles = false)
     {
-        var deleteImpact = await PreviewDeleteIngredientTypeAsync(id);
-
-        if (deleteImpact.CocktailNames.Count != 0)
+        var deleteBottles = false;
+        if (!newValue)
         {
-            throw new InvalidOperationException(
-                $"Cannot delete ingredient type with ID {id} because it is used in cocktails: {string.Join(", ", deleteImpact.CocktailNames)}");
-        }
+            var modifyImpact = await PreviewIngredientTypeModifyAsync(id);
 
-        if (deleteImpact.BottleInfoList.Count != 0 && !allowDeleteWithBottles)
-        {
-            throw new InvalidOperationException(
-                $"Cannot delete ingredient type with ID {id} because it is used in bottles: {string.Join(", ", deleteImpact.BottleInfoList)}");
+            if (modifyImpact.BottleInfoList.Count > 0 && !allowWithBottles)
+            {
+                throw new InvalidOperationException(
+                    $"Cannot update ingredient type with ID {id} because it is used in bottles: {string.Join(", ", modifyImpact.BottleInfoList)}");
+            }
+
+            deleteBottles = modifyImpact.BottleInfoList.Count > 0;
         }
 
         var ingredientType = await cocktailDbContext.IngredientTypes.FirstOrDefaultAsync(type => type.Id == id);
 
-        if (ingredientType != null)
+        if (ingredientType is not null)
+        {
+            ingredientType.IsTracked = newValue;
+
+            if (deleteBottles)
+            {
+                var bottles = await cocktailDbContext.Bottles.Where(b => b.TypeId == id).ToListAsync();
+                cocktailDbContext.Bottles.RemoveRange(bottles);
+            }
+
+            await cocktailDbContext.SaveChangesAsync();
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task DeleteIngredientTypeAsync(int id, bool allowWithBottles = false)
+    {
+        var modifyImpact = await PreviewIngredientTypeModifyAsync(id);
+
+        if (modifyImpact.CocktailNames.Count != 0)
+        {
+            throw new InvalidOperationException(
+                $"Cannot delete ingredient type with ID {id} because it is used in cocktails: {string.Join(", ", modifyImpact.CocktailNames)}");
+        }
+
+        if (modifyImpact.BottleInfoList.Count != 0 && !allowWithBottles)
+        {
+            throw new InvalidOperationException(
+                $"Cannot delete ingredient type with ID {id} because it is used in bottles: {string.Join(", ", modifyImpact.BottleInfoList)}");
+        }
+
+        var ingredientType = await cocktailDbContext.IngredientTypes.FirstOrDefaultAsync(type => type.Id == id);
+
+        if (ingredientType is not null)
         {
             cocktailDbContext.IngredientTypes.Remove(ingredientType);
             await cocktailDbContext.SaveChangesAsync();

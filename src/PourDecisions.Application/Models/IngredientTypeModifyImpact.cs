@@ -1,6 +1,6 @@
 namespace PourDecisions.Application.Models;
 
-public record IngredientTypeDeleteImpact
+public record IngredientTypeModifyImpact
 {
     public List<string> CocktailNames { get; init; } = [];
     public List<string> BottleInfoList { get; init; } = [];

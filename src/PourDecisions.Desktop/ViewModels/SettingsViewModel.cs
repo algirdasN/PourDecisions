@@ -4,20 +4,14 @@ using System.Reflection;
 using CommunityToolkit.Mvvm.ComponentModel;
 using FluentAvalonia.UI.Controls;
 using PourDecisions.Application.Services;
-using PourDecisions.Core.Entities;
 using PourDecisions.Desktop.Services;
 using PourDecisions.Shared.Extensions;
 
 namespace PourDecisions.Desktop.ViewModels;
 
-public partial class SettingsViewModel(
-    IBottleService bottleService,
-    IIngredientService ingredientService,
-    IDialogService dialogService)
+public partial class SettingsViewModel(IIngredientService ingredientService, IDialogService dialogService)
     : ViewModelBase, IAsyncLoadable
 {
-    private ICollection<Bottle> _bottles = [];
-
     [ObservableProperty]
     public partial ObservableCollection<ModifyIngredientTypeViewModel> IngredientTypes { get; set; } = [];
 
@@ -25,7 +19,6 @@ public partial class SettingsViewModel(
 
     public async Task LoadAsync()
     {
-        _bottles = await bottleService.GetBottlesWithTypeAsync();
         var ingredientTypes = await ingredientService.GetIngredientTypesAsync();
 
         IngredientTypes = ingredientTypes
@@ -46,14 +39,14 @@ public partial class SettingsViewModel(
     {
         if (!newValue)
         {
-            var bottlesWithIngredient = _bottles.Where(bottle => bottle.TypeId == ingredientVm.Id).ToList();
+            var modifyImpact = await ingredientService.PreviewIngredientTypeModifyAsync(ingredientVm.Id);
 
-            if (bottlesWithIngredient.Count > 0)
+            if (modifyImpact.BottleInfoList.Count > 0)
             {
                 var result = await dialogService.ShowConfirmationDialogAsync("Set ingredient type to untracked",
                     $"""
                      Confirm setting {ingredientVm.Name} to untracked. The following bottles will be deleted:
-                     {string.Join(Environment.NewLine, bottlesWithIngredient.Select(b => $" - {b.Name} ({b.Volume} ml)"))}
+                     {string.Join(Environment.NewLine, modifyImpact.BottleInfoList.Select(b => $" - {b}"))}
                      """,
                     "Confirm", "Cancel", FAContentDialogButton.Close);
 
@@ -66,8 +59,7 @@ public partial class SettingsViewModel(
 
         try
         {
-            await ingredientService.UpdateIngredientTypeTrackedWithBottleCleanupAsync(ingredientVm.Id, newValue);
-            _bottles = await bottleService.GetBottlesWithTypeAsync();
+            await ingredientService.UpdateIngredientTypeTrackedAsync(ingredientVm.Id, newValue, true);
             return true;
         }
         catch (Exception ex)
@@ -113,7 +105,7 @@ public partial class SettingsViewModel(
 
     private async Task DeleteIngredientType(ModifyIngredientTypeViewModel ingredientVm)
     {
-        var deleteImpact = await ingredientService.PreviewDeleteIngredientTypeAsync(ingredientVm.Id);
+        var deleteImpact = await ingredientService.PreviewIngredientTypeModifyAsync(ingredientVm.Id);
 
         if (deleteImpact.CocktailNames.Count > 0)
         {
