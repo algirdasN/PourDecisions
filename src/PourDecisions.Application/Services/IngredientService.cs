@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using PourDecisions.Application.Models;
 using PourDecisions.Core.Data;
 using PourDecisions.Core.Entities;
 using PourDecisions.Shared.Extensions;
@@ -43,10 +44,19 @@ public interface IIngredientService
     Task UpdateIngredientTypeTrackedWithBottleCleanupAsync(int id, bool newValue);
 
     /// <summary>
+    /// Asynchronously previews the impact of deleting an ingredient type.
+    /// Retrieves a list of cocktails and bottles associated with the specified ingredient type.
+    /// </summary>
+    /// <param name="id">The unique identifier of the ingredient type to preview deletion for.</param>
+    /// <returns>A data object containing the names of cocktails using the ingredient type and a list of associated bottles, if any.</returns>
+    Task<IngredientTypeDeleteImpact> PreviewDeleteIngredientTypeAsync(int id);
+
+    /// <summary>
     /// Asynchronously deletes an ingredient type by its ID.
     /// </summary>
     /// <param name="id">The ID of the ingredient type to delete.</param>
-    Task DeleteIngredientTypeAsync(int id);
+    /// <param name="allowDeleteWithBottles">Whether to allow deletion of ingredient types that have associated bottles.</param>
+    Task DeleteIngredientTypeAsync(int id, bool allowDeleteWithBottles = false);
 }
 
 /// <summary>
@@ -128,9 +138,40 @@ public class IngredientService(CocktailDbContext cocktailDbContext) : IIngredien
         }
     }
 
-    /// <inheritdoc/>
-    public async Task DeleteIngredientTypeAsync(int id)
+    public async Task<IngredientTypeDeleteImpact> PreviewDeleteIngredientTypeAsync(int id)
     {
+        var cocktailsWithIngredient = await cocktailDbContext.Cocktails
+            .Where(cocktail => cocktail.CocktailIngredients.Any(i => i.TypeId == id))
+            .ToListAsync();
+
+        var bottlesWithIngredient = await cocktailDbContext.Bottles
+            .Where(bottle => bottle.TypeId == id)
+            .ToListAsync();
+
+        return new IngredientTypeDeleteImpact
+        {
+            CocktailNames = cocktailsWithIngredient.Select(c => c.Name).ToList(),
+            BottleInfoList = bottlesWithIngredient.Select(b => $"{b.Name} ({b.Volume} ml)").ToList()
+        };
+    }
+
+    /// <inheritdoc/>
+    public async Task DeleteIngredientTypeAsync(int id, bool allowDeleteWithBottles = false)
+    {
+        var deleteImpact = await PreviewDeleteIngredientTypeAsync(id);
+
+        if (deleteImpact.CocktailNames.Count != 0)
+        {
+            throw new InvalidOperationException(
+                $"Cannot delete ingredient type with ID {id} because it is used in cocktails: {string.Join(", ", deleteImpact.CocktailNames)}");
+        }
+
+        if (deleteImpact.BottleInfoList.Count != 0 && !allowDeleteWithBottles)
+        {
+            throw new InvalidOperationException(
+                $"Cannot delete ingredient type with ID {id} because it is used in bottles: {string.Join(", ", deleteImpact.BottleInfoList)}");
+        }
+
         var ingredientType = await cocktailDbContext.IngredientTypes.FirstOrDefaultAsync(type => type.Id == id);
 
         if (ingredientType != null)

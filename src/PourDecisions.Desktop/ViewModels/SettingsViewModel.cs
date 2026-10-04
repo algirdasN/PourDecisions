@@ -12,13 +12,11 @@ namespace PourDecisions.Desktop.ViewModels;
 
 public partial class SettingsViewModel(
     IBottleService bottleService,
-    ICocktailService cocktailService,
     IIngredientService ingredientService,
     IDialogService dialogService)
     : ViewModelBase, IAsyncLoadable
 {
     private ICollection<Bottle> _bottles = [];
-    private ICollection<Cocktail> _cocktails = [];
 
     [ObservableProperty]
     public partial ObservableCollection<ModifyIngredientTypeViewModel> IngredientTypes { get; set; } = [];
@@ -28,7 +26,6 @@ public partial class SettingsViewModel(
     public async Task LoadAsync()
     {
         _bottles = await bottleService.GetBottlesWithTypeAsync();
-        _cocktails = await cocktailService.GetAllWithIngredientsAsync();
         var ingredientTypes = await ingredientService.GetIngredientTypesAsync();
 
         IngredientTypes = ingredientTypes
@@ -116,27 +113,23 @@ public partial class SettingsViewModel(
 
     private async Task DeleteIngredientType(ModifyIngredientTypeViewModel ingredientVm)
     {
-        var cocktailsWithIngredient = _cocktails
-            .Where(cocktail => cocktail.CocktailIngredients.Any(i => i.TypeId == ingredientVm.Id))
-            .ToList();
+        var deleteImpact = await ingredientService.PreviewDeleteIngredientTypeAsync(ingredientVm.Id);
 
-        if (cocktailsWithIngredient.Count > 0)
+        if (deleteImpact.CocktailNames.Count > 0)
         {
             await dialogService.ShowInformationDialogAsync("Cannot delete ingredient type",
                 $"""
                  This ingredient type is used in one or more cocktails:
-                 {string.Join(Environment.NewLine, cocktailsWithIngredient.Select(c => $" - {c.Name}"))}
+                 {string.Join(Environment.NewLine, deleteImpact.CocktailNames.Select(c => $" - {c}"))}
                  """);
 
             return;
         }
 
-        var bottlesWithIngredient = _bottles.Where(bottle => bottle.TypeId == ingredientVm.Id).ToList();
-
-        var message = bottlesWithIngredient.Count > 0
+        var message = deleteImpact.BottleInfoList.Count > 0
             ? $"""
                Confirm ingredient type deletion. The following bottles will also be deleted:
-               {string.Join(Environment.NewLine, bottlesWithIngredient.Select(b => $" - {b.Name} ({b.Volume} ml)"))}
+               {string.Join(Environment.NewLine, deleteImpact.BottleInfoList.Select(b => $" - {b}"))}
                """
             : "Confirm ingredient type deletion.";
 
@@ -150,7 +143,7 @@ public partial class SettingsViewModel(
 
         try
         {
-            await ingredientService.DeleteIngredientTypeAsync(ingredientVm.Id);
+            await ingredientService.DeleteIngredientTypeAsync(ingredientVm.Id, true);
 
             IngredientTypes.Remove(IngredientTypes.First(type => type.Id == ingredientVm.Id));
         }
