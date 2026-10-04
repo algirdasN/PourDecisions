@@ -98,7 +98,7 @@ public class IngredientService(CocktailDbContext cocktailDbContext) : IIngredien
         var normalizedName = newName.ToTitleCase();
 
         var nameExists = await cocktailDbContext.IngredientTypes
-            .AnyAsync(type => type.Id != id && type.Name.Equals(normalizedName, StringComparison.OrdinalIgnoreCase));
+            .AnyAsync(type => type.Id != id && type.Name.ToLower() == normalizedName.ToLower());
 
         if (nameExists)
         {
