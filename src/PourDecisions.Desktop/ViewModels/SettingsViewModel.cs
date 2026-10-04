@@ -24,10 +24,8 @@ public partial class SettingsViewModel(IIngredientService ingredientService, IDi
         IngredientTypes = ingredientTypes
             .Select(ingredientType =>
             {
-                var vm = new ModifyIngredientTypeViewModel(ingredientType)
-                {
-                    RequestTrackedChange = ChangeIngredientTrackedStatus
-                };
+                var vm = new ModifyIngredientTypeViewModel(ingredientType);
+                vm.RequestTrackedChange += ChangeIngredientTrackedStatus;
                 vm.RenameButtonClicked += OnRenameButtonClicked;
                 vm.DeleteButtonClicked += OnDeleteButtonClicked;
                 return vm;

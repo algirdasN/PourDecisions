@@ -10,7 +10,6 @@ public partial class ModifyIngredientTypeViewModel(IngredientType ingredientType
         Comparer<ModifyIngredientTypeViewModel>.Create((x, y) =>
             string.Compare(x.Name, y.Name, StringComparison.Ordinal));
 
-    public Func<ModifyIngredientTypeViewModel, bool, Task<bool>>? RequestTrackedChange;
     private bool _isUpdating;
     public int Id { get; } = ingredientType.Id;
 
@@ -20,8 +19,20 @@ public partial class ModifyIngredientTypeViewModel(IngredientType ingredientType
     [ObservableProperty]
     public partial bool IsTracked { get; set; } = ingredientType.IsTracked;
 
+    public event Func<ModifyIngredientTypeViewModel, bool, Task<bool>>? RequestTrackedChange;
     public event Action<ModifyIngredientTypeViewModel>? RenameButtonClicked;
     public event Action<ModifyIngredientTypeViewModel>? DeleteButtonClicked;
+
+    [RelayCommand]
+    private void ToggleTracked()
+    {
+        if (_isUpdating)
+        {
+            return;
+        }
+
+        _ = RequestTrackedChangeAsync();
+    }
 
     [RelayCommand]
     private void Rename()
@@ -35,27 +46,24 @@ public partial class ModifyIngredientTypeViewModel(IngredientType ingredientType
         DeleteButtonClicked?.Invoke(this);
     }
 
-    partial void OnIsTrackedChanged(bool oldValue, bool newValue)
-    {
-        if (_isUpdating)
-        {
-            return;
-        }
 
-        _ = RequestTrackedChangeAsync(oldValue, newValue);
-    }
-
-    private async Task RequestTrackedChangeAsync(bool oldValue, bool newValue)
+    private async Task RequestTrackedChangeAsync()
     {
         if (RequestTrackedChange is null)
         {
             return;
         }
 
-        if (!await RequestTrackedChange.Invoke(this, newValue))
+        _isUpdating = true;
+        try
         {
-            _isUpdating = true;
-            IsTracked = oldValue;
+            if (await RequestTrackedChange.Invoke(this, !IsTracked))
+            {
+                IsTracked = !IsTracked;
+            }
+        }
+        finally
+        {
             _isUpdating = false;
         }
     }
