@@ -6,7 +6,7 @@ public record CocktailEditSummary(int? Id, string Name, bool IsFavorite)
         Comparer<CocktailEditSummary>.Create((x, y) =>
             x.Id.HasValue.CompareTo(y.Id.HasValue) switch
             {
-                0 => string.Compare(x.Name, y.Name, StringComparison.Ordinal),
+                0 => string.Compare(x.Name, y.Name, StringComparison.OrdinalIgnoreCase),
                 var idComp => idComp
             });
 };

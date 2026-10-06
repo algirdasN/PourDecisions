@@ -8,7 +8,7 @@ public partial class ModifyIngredientTypeViewModel(IngredientType ingredientType
 {
     public static readonly Comparer<ModifyIngredientTypeViewModel> NameComparer =
         Comparer<ModifyIngredientTypeViewModel>.Create((x, y) =>
-            string.Compare(x.Name, y.Name, StringComparison.Ordinal));
+            string.Compare(x.Name, y.Name, StringComparison.OrdinalIgnoreCase));
 
     private bool _isUpdating;
     public int Id { get; } = ingredientType.Id;
