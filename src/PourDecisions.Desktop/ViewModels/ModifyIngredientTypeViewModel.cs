@@ -10,28 +10,30 @@ public partial class ModifyIngredientTypeViewModel(IngredientType ingredientType
         Comparer<ModifyIngredientTypeViewModel>.Create((x, y) =>
             string.Compare(x.Name, y.Name, StringComparison.OrdinalIgnoreCase));
 
-    private bool _isUpdating;
     public int Id { get; } = ingredientType.Id;
 
     [ObservableProperty]
     public partial string Name { get; set; } = ingredientType.Name;
 
     [ObservableProperty]
+    public partial bool IsBusy { get; set; }
+
+    [ObservableProperty]
     public partial bool IsTracked { get; set; } = ingredientType.IsTracked;
 
-    public event Func<ModifyIngredientTypeViewModel, bool, Task<bool>>? RequestTrackedChange;
+    public event Action<ModifyIngredientTypeViewModel, bool>? ToggleTrackedButtonClicked;
     public event Action<ModifyIngredientTypeViewModel>? RenameButtonClicked;
     public event Action<ModifyIngredientTypeViewModel>? DeleteButtonClicked;
 
     [RelayCommand]
     private void ToggleTracked()
     {
-        if (_isUpdating)
+        if (IsBusy)
         {
             return;
         }
 
-        _ = RequestTrackedChangeAsync();
+        ToggleTrackedButtonClicked?.Invoke(this, !IsTracked);
     }
 
     [RelayCommand]
@@ -44,27 +46,5 @@ public partial class ModifyIngredientTypeViewModel(IngredientType ingredientType
     private void Delete()
     {
         DeleteButtonClicked?.Invoke(this);
-    }
-
-
-    private async Task RequestTrackedChangeAsync()
-    {
-        if (RequestTrackedChange is null)
-        {
-            return;
-        }
-
-        _isUpdating = true;
-        try
-        {
-            if (await RequestTrackedChange.Invoke(this, !IsTracked))
-            {
-                IsTracked = !IsTracked;
-            }
-        }
-        finally
-        {
-            _isUpdating = false;
-        }
     }
 }

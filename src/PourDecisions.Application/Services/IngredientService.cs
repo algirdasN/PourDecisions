@@ -134,7 +134,7 @@ public class IngredientService(CocktailDbContext cocktailDbContext) : IIngredien
         return new IngredientTypeModifyImpact
         {
             CocktailNames = cocktailsWithIngredient.Select(c => c.Name).ToList(),
-            BottleInfoList = bottlesWithIngredient.Select(b => $"{b.Name} ({b.Volume} ml)").ToList()
+            BottleInfoList = bottlesWithIngredient.Select(b => new BottleSummary(b.Name, b.Volume)).ToList()
         };
     }
 

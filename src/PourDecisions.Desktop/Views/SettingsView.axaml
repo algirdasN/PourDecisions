@@ -28,7 +28,7 @@
                     <ItemsControl ItemsSource="{Binding IngredientTypes}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Grid>
+                                <Grid IsEnabled="{Binding !IsBusy}">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition SharedSizeGroup="Name" Width="Auto" />
                                         <ColumnDefinition SharedSizeGroup="Tracked" Width="Auto" />
