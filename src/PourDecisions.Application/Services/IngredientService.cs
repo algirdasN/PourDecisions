@@ -134,19 +134,17 @@ public class IngredientService(CocktailDbContext cocktailDbContext) : IIngredien
     /// <inheritdoc/>
     public async Task<IngredientTypeModifyImpact> PreviewIngredientTypeModifyAsync(int id)
     {
-        var cocktailsWithIngredient = await cocktailDbContext.Cocktails
+        var cocktailNames = await cocktailDbContext.Cocktails
             .Where(cocktail => cocktail.CocktailIngredients.Any(i => i.TypeId == id))
+            .Select(cocktail => cocktail.Name)
             .ToListAsync();
 
-        var bottlesWithIngredient = await cocktailDbContext.Bottles
+        var bottleSummaries = await cocktailDbContext.Bottles
             .Where(bottle => bottle.TypeId == id)
+            .Select(bottle => new BottleSummary(bottle.Name, bottle.Volume))
             .ToListAsync();
 
-        return new IngredientTypeModifyImpact
-        {
-            CocktailNames = cocktailsWithIngredient.Select(c => c.Name).ToList(),
-            BottleInfoList = bottlesWithIngredient.Select(b => new BottleSummary(b.Name, b.Volume)).ToList()
-        };
+        return new IngredientTypeModifyImpact { CocktailNames = cocktailNames, BottleInfoList = bottleSummaries };
     }
 
     /// <inheritdoc/>
