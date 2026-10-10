@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using CommunityToolkit.Mvvm.ComponentModel;
 using FluentAvalonia.UI.Controls;
@@ -88,19 +87,20 @@ public partial class SettingsViewModel(IIngredientService ingredientService, IDi
 
         try
         {
-            var newName = await dialogService.ShowInputDialogAsync("Rename ingredient type", "Enter new name:",
-                "Confirm", "Cancel", ingredientVm.Name, BuildIngredientNameValidator(ingredientVm.Name));
+            _ = await dialogService.ShowInputDialogAsync($"Rename ingredient type '{ingredientVm.Name}'",
+                "Enter new name:", "Confirm", "Cancel", ingredientVm.Name,
+                async (value) =>
+                {
+                    var result = await ingredientService.RenameIngredientAsync(ingredientVm.Id, value);
 
-            if (newName is null)
-            {
-                return;
-            }
+                    if (result.IsSuccess)
+                    {
+                        ingredientVm.Name = result.Value;
+                        IngredientTypes.MoveInSorted(ingredientVm, ModifyIngredientTypeViewModel.NameComparer);
+                    }
 
-            await ingredientService.RenameIngredientAsync(ingredientVm.Id, newName);
-
-            ingredientVm.Name = newName.ToTitleCase();
-
-            IngredientTypes.MoveInSorted(ingredientVm, ModifyIngredientTypeViewModel.NameComparer);
+                    return result;
+                });
         }
         catch (Exception e)
         {
@@ -163,28 +163,5 @@ public partial class SettingsViewModel(IIngredientService ingredientService, IDi
         {
             ingredientVm.IsBusy = false;
         }
-    }
-
-    private Func<string, ValidationResult?> BuildIngredientNameValidator(string ingredientName)
-    {
-        return value =>
-        {
-            if (value.Length < 3)
-            {
-                return new ValidationResult("Ingredient type name must be at least 3 characters long.");
-            }
-
-            if (value.Equals(ingredientName, StringComparison.OrdinalIgnoreCase))
-            {
-                return new ValidationResult("Enter a new ingredient type name.");
-            }
-
-            if (IngredientTypes.Any(type => type.Name.Equals(value, StringComparison.OrdinalIgnoreCase)))
-            {
-                return new ValidationResult("Ingredient type name is already in use.");
-            }
-
-            return ValidationResult.Success;
-        };
     }
 }

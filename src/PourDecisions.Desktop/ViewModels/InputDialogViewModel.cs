@@ -1,35 +1,22 @@
-using System.ComponentModel.DataAnnotations;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace PourDecisions.Desktop.ViewModels;
 
-public partial class InputDialogViewModel(
-    string message,
-    string initialValue = "",
-    Func<string, ValidationResult?>? validator = null)
-    : ViewModelBase
+public partial class InputDialogViewModel(string message, string initialValue = "") : ViewModelBase
 {
-    private readonly Func<string, ValidationResult?>? _validator = validator;
-
     public string Message { get; } = message;
 
     [ObservableProperty]
-    [NotifyDataErrorInfo]
-    [CustomValidation(typeof(InputDialogViewModel), nameof(Validate))]
     public partial string Value { get; set; } = initialValue;
 
-    public bool HasValidationError()
-    {
-        ValidateAllProperties();
-        return HasErrors;
-    }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasError))]
+    public partial string? ErrorMessage { get; set; }
 
-    public static ValidationResult? Validate(string value, ValidationContext context)
-    {
-        var instance = (InputDialogViewModel)context.ObjectInstance;
+    public bool HasError => ErrorMessage is not null;
 
-        return instance._validator is not null
-            ? instance._validator(value)
-            : ValidationResult.Success;
+    partial void OnValueChanged(string value)
+    {
+        ErrorMessage = null;
     }
 }

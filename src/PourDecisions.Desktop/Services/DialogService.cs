@@ -1,5 +1,5 @@
-using System.ComponentModel.DataAnnotations;
 using FluentAvalonia.UI.Controls;
+using PourDecisions.Application.Models;
 using PourDecisions.Desktop.ViewModels;
 using PourDecisions.Desktop.Views;
 
@@ -38,10 +38,10 @@ public interface IDialogService
     /// <param name="primaryButtonText">The text for the primary action button.</param>
     /// <param name="closeButtonText">The text for the close button.</param>
     /// <param name="initialValue">The initial value to populate the input field. Defaults to an empty string.</param>
-    /// <param name="validator"> A function to validate the user's input. Defaults to null.</param>
+    /// <param name="inputCommand">A function to handle the user's input. Defaults to null.</param>
     /// <returns>The value entered by the user, or null if the dialog was canceled.</returns>
-    Task<string?> ShowInputDialogAsync(string title, string message, string primaryButtonText,
-        string closeButtonText, string initialValue = "", Func<string, ValidationResult?>? validator = null);
+    Task<string?> ShowInputDialogAsync(string title, string message, string primaryButtonText, string closeButtonText,
+        string initialValue = "", Func<string, Task<Result>>? inputCommand = null);
 }
 
 /// <summary>
@@ -81,11 +81,10 @@ public class DialogService : IDialogService
     }
 
     /// <inheritdoc/>
-    public async Task<string?> ShowInputDialogAsync(string title, string message,
-        string primaryButtonText, string closeButtonText, string initialValue = "",
-        Func<string, ValidationResult?>? validator = null)
+    public async Task<string?> ShowInputDialogAsync(string title, string message, string primaryButtonText,
+        string closeButtonText, string initialValue = "", Func<string, Task<Result>>? inputCommand = null)
     {
-        var vm = new InputDialogViewModel(message, initialValue, validator);
+        var vm = new InputDialogViewModel(message, initialValue);
 
         var dialog = new FAContentDialog
         {
@@ -96,11 +95,30 @@ public class DialogService : IDialogService
             DefaultButton = FAContentDialogButton.Primary
         };
 
-        dialog.PrimaryButtonClick += (sender, args) =>
+        dialog.PrimaryButtonClick += async (sender, args) =>
         {
-            if (vm.HasValidationError())
+            if (inputCommand is null)
             {
-                args.Cancel = true;
+                return;
+            }
+
+            var deferral = args.GetDeferral();
+            dialog.IsEnabled = false;
+
+            try
+            {
+                var result = await inputCommand.Invoke(vm.Value);
+
+                if (!result.IsSuccess)
+                {
+                    vm.ErrorMessage = result.ErrorMessage;
+                    args.Cancel = true;
+                }
+            }
+            finally
+            {
+                dialog.IsEnabled = true;
+                deferral.Complete();
             }
         };
 

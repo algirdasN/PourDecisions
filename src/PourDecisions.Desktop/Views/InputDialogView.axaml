@@ -7,5 +7,10 @@
         <TextBlock Text="{Binding Message}" />
         <TextBox x:Name="InputTextBox"
                  Text="{Binding Value, Mode=TwoWay}" />
+        <TextBlock Text="{Binding ErrorMessage}"
+                   IsVisible="{Binding HasError}"
+                   FontSize="12"
+                   Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                   TextWrapping="Wrap" />
     </StackPanel>
 </UserControl>

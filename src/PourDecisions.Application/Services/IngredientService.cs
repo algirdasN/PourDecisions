@@ -34,7 +34,7 @@ public interface IIngredientService
     /// </summary>
     /// <param name="id">The ID of the ingredient type to rename</param>
     /// <param name="newName">New name of the ingredient type.</param>
-    Task RenameIngredientAsync(int id, string newName);
+    Task<Result<string>> RenameIngredientAsync(int id, string newName);
 
     /// <summary>
     /// Asynchronously previews the impact of modifying an ingredient type.
@@ -97,27 +97,38 @@ public class IngredientService(CocktailDbContext cocktailDbContext) : IIngredien
     }
 
     /// <inheritdoc/>
-    public async Task RenameIngredientAsync(int id, string newName)
+    public async Task<Result<string>> RenameIngredientAsync(int id, string newName)
     {
+        var normalizedName = newName.ToTitleCase();
+
+        if (normalizedName.Length < 3)
+        {
+            return Result<string>.Error("Ingredient type name must be at least 3 characters long.");
+        }
+
         var ingredientType = await cocktailDbContext.IngredientTypes.FirstOrDefaultAsync(type => type.Id == id);
 
         if (ingredientType is null)
         {
-            return;
+            return Result<string>.Error($"Ingredient type with ID {id} not found.");
         }
 
-        var normalizedName = newName.ToTitleCase();
+        if (normalizedName.Equals(ingredientType.Name, StringComparison.OrdinalIgnoreCase))
+        {
+            return Result<string>.Error("Enter a new ingredient type name.");
+        }
 
         var nameExists = await cocktailDbContext.IngredientTypes
             .AnyAsync(type => type.Id != id && type.Name == normalizedName);
 
         if (nameExists)
         {
-            throw new InvalidOperationException($"Ingredient type '{normalizedName}' already exists.");
+            return Result<string>.Error($"Ingredient type '{normalizedName}' already exists.");
         }
 
         ingredientType.Name = normalizedName;
         await cocktailDbContext.SaveChangesAsync();
+        return Result<string>.Success(normalizedName);
     }
 
     /// <inheritdoc/>
