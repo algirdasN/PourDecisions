@@ -66,7 +66,7 @@ public class BottleService(CocktailDbContext cocktailDbContext) : IBottleService
     public async Task<Bottle> AddBottleAsync(string typeName, string bottleName, int volume, FillLevel fillLevel)
     {
         var ingredientType = await cocktailDbContext.IngredientTypes
-            .FirstOrDefaultAsync(type => type.Name.ToLower() == typeName.ToLower());
+            .FirstOrDefaultAsync(type => type.Name == typeName);
 
         if (ingredientType is null)
         {

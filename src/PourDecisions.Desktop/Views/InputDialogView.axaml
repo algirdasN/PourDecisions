@@ -1,0 +1,16 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PourDecisions.Desktop.ViewModels"
+             x:Class="PourDecisions.Desktop.Views.InputDialogView"
+             x:DataType="vm:InputDialogViewModel">
+    <StackPanel Spacing="10" Width="300">
+        <TextBlock Text="{Binding Message}" />
+        <TextBox x:Name="InputTextBox"
+                 Text="{Binding Value, Mode=TwoWay}" />
+        <TextBlock Text="{Binding ErrorMessage}"
+                   IsVisible="{Binding HasError}"
+                   FontSize="12"
+                   Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                   TextWrapping="Wrap" />
+    </StackPanel>
+</UserControl>

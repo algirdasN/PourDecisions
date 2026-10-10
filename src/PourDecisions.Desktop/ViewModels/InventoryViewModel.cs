@@ -34,14 +34,12 @@ public partial class InventoryViewModel(
 
     public async Task LoadAsync()
     {
-        var bottleTask = bottleService.GetBottlesWithTypeAsync();
-        var ingredientTypeTask = ingredientService.GetTrackedIngredientTypeNamesAsync();
+        var bottles = await bottleService.GetBottlesWithTypeAsync();
+        var ingredientTypes = await ingredientService.GetTrackedIngredientTypeNamesAsync();
 
-        await Task.WhenAll(bottleTask, ingredientTypeTask);
+        _ingredientTypeNames = ingredientTypes;
 
-        _ingredientTypeNames = ingredientTypeTask.Result;
-
-        IngredientTypes = bottleTask.Result
+        IngredientTypes = bottles
             .GroupBy(bottle => bottle.Type)
             .OrderBy(group => group.Key.Name)
             .Select(group =>
@@ -152,7 +150,8 @@ public partial class InventoryViewModel(
         {
             var message = $"Are you sure you want to delete '{bottleName}' ({typeName})?";
 
-            var result = await dialogService.ShowConfirmationDialogAsync("Delete bottle", message, "Delete", "Cancel");
+            var result = await dialogService.ShowConfirmationDialogAsync("Delete bottle", message, "Delete", "Cancel",
+                FAContentDialogButton.Close);
 
             if (result != FAContentDialogResult.Primary)
             {
