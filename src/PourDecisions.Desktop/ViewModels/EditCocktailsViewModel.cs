@@ -36,14 +36,12 @@ public partial class EditCocktailsViewModel(
 
     public async Task LoadAsync()
     {
-        var cocktailsTask = cocktailService.GetAllSummariesAsync();
-        var ingredientTypeTask = ingredientService.GetIngredientTypeNamesAsync();
+        var cocktails = await cocktailService.GetAllSummariesAsync();
+        var ingredients = await ingredientService.GetIngredientTypeNamesAsync();
 
-        await Task.WhenAll(cocktailsTask, ingredientTypeTask);
+        _ingredientTypeNames = ingredients.ToObservableCollection();
 
-        _ingredientTypeNames = ingredientTypeTask.Result.ToObservableCollection();
-
-        CocktailSummaries = cocktailsTask.Result
+        CocktailSummaries = cocktails
             .Prepend(new CocktailEditSummary(null, "<New Cocktail>", false))
             .ToObservableCollection();
 
@@ -90,6 +88,7 @@ public partial class EditCocktailsViewModel(
 
             CocktailEditItemViewModel = null;
             CocktailSummaries[CocktailSummaries.IndexOf(oldSummary)] = newSummary;
+            CocktailSummaries.MoveInSorted(newSummary, CocktailEditSummary.NameComparer);
             SelectedCocktail = newSummary;
         }
         catch (Exception e)
@@ -171,7 +170,7 @@ public partial class EditCocktailsViewModel(
             var message = $"Are you sure you want to delete cocktail '{cocktailName}'?";
 
             var result = await dialogService.ShowConfirmationDialogAsync("Delete cocktail", message,
-                "Delete", "Cancel");
+                "Delete", "Cancel", FAContentDialogButton.Close);
 
             if (result != FAContentDialogResult.Primary)
             {

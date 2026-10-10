@@ -81,7 +81,8 @@ public class InventoryViewModelTests
         _bottleService.GetBottlesWithTypeAsync().Returns(new List<Bottle> { bottle });
         _ingredientService.GetTrackedIngredientTypeNamesAsync().Returns(new List<string> { "Gin" });
         _dialogService
-            .ShowConfirmationDialogAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+            .ShowConfirmationDialogAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+                Arg.Any<FAContentDialogButton>())
             .Returns(FAContentDialogResult.Primary);
         _bottleService.GetBottlesOfTypeAsync(1).Returns(new List<Bottle>());
 

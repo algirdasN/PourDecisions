@@ -103,10 +103,10 @@ public class CocktailService(CocktailDbContext cocktailDbContext) : ICocktailSer
     /// <inheritdoc/>
     public async Task<CocktailEditSummary> GetSummaryAsync(int cocktailId)
     {
-        var cocktail = await cocktailDbContext.Cocktails
-            .FirstAsync(c => c.Id == cocktailId);
-
-        return new CocktailEditSummary(cocktail.Id, cocktail.Name, cocktail.IsFavorite);
+        return await cocktailDbContext.Cocktails
+            .Where(c => c.Id == cocktailId)
+            .Select(c => new CocktailEditSummary(c.Id, c.Name, c.IsFavorite))
+            .FirstAsync();
     }
 
     /// <inheritdoc/>
