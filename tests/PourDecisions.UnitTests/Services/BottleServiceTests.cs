@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using PourDecisions.Application.Services;
 using PourDecisions.Core.Data;
@@ -8,32 +9,43 @@ namespace PourDecisions.UnitTests.Services;
 
 public class BottleServiceTests
 {
-    private static DbContextOptions<CocktailDbContext> CreateInMemoryOptions(string databaseName)
+    private static SqliteConnection CreateOpenConnection()
     {
-        return new DbContextOptionsBuilder<CocktailDbContext>()
-            .UseInMemoryDatabase(databaseName)
+        var connection = new SqliteConnection("Filename=:memory:");
+        connection.Open();
+        using var context = CreateContext(connection);
+        context.Database.EnsureCreated();
+        return connection;
+    }
+
+    private static CocktailDbContext CreateContext(SqliteConnection connection)
+    {
+        var options = new DbContextOptionsBuilder<CocktailDbContext>()
+            .UseSqlite(connection)
             .Options;
+        return new CocktailDbContext(options);
     }
 
     [Fact]
     public async Task AddBottleAsync_WithNewIngredientType_CreatesTypeAndBottle()
     {
         // Arrange
-        var options = CreateInMemoryOptions(nameof(AddBottleAsync_WithNewIngredientType_CreatesTypeAndBottle));
+        await using var connection = CreateOpenConnection();
+
         var typeName = "gin";
         var bottleName = "Bombay Sapphire";
         var volume = 700;
         var fillLevel = FillLevel.Full;
 
         // Act
-        await using (var context = new CocktailDbContext(options))
+        await using (var context = CreateContext(connection))
         {
             var service = new BottleService(context);
             await service.AddBottleAsync(typeName, bottleName, volume, fillLevel);
         }
 
         // Assert
-        await using (var context = new CocktailDbContext(options))
+        await using (var context = CreateContext(connection))
         {
             var bottle = await context.Bottles.Include(b => b.Type).SingleAsync();
             Assert.Equal(bottleName, bottle.Name);
@@ -48,24 +60,25 @@ public class BottleServiceTests
     public async Task AddBottleAsync_WithExistingIngredientType_UsesExistingTypeAndSetsTracked()
     {
         // Arrange
-        var options = CreateInMemoryOptions(nameof(AddBottleAsync_WithExistingIngredientType_UsesExistingTypeAndSetsTracked));
+        await using var connection = CreateOpenConnection();
+
         var ingredientType = new IngredientType { Id = 1, Name = "Gin", IsTracked = false };
-        
-        await using (var context = new CocktailDbContext(options))
+
+        await using (var context = CreateContext(connection))
         {
             await context.IngredientTypes.AddAsync(ingredientType);
             await context.SaveChangesAsync();
         }
 
         // Act
-        await using (var context = new CocktailDbContext(options))
+        await using (var context = CreateContext(connection))
         {
             var service = new BottleService(context);
             await service.AddBottleAsync("GIN", "Beefeater", 1000, FillLevel.Half);
         }
 
         // Assert
-        await using (var context = new CocktailDbContext(options))
+        await using (var context = CreateContext(connection))
         {
             var bottle = await context.Bottles.Include(b => b.Type).SingleAsync();
             Assert.Equal(1, bottle.Type.Id);
@@ -77,12 +90,13 @@ public class BottleServiceTests
     public async Task GetBottlesWithTypeAsync_ReturnsAllBottlesWithTypeLoaded()
     {
         // Arrange
-        var options = CreateInMemoryOptions(nameof(GetBottlesWithTypeAsync_ReturnsAllBottlesWithTypeLoaded));
+        await using var connection = CreateOpenConnection();
+
         var type = new IngredientType { Id = 1, Name = "Gin", IsTracked = true };
         var bottle1 = new Bottle { Id = 1, Name = "Bottle 1", TypeId = 1, Type = type };
         var bottle2 = new Bottle { Id = 2, Name = "Bottle 2", TypeId = 1, Type = type };
 
-        await using (var context = new CocktailDbContext(options))
+        await using (var context = CreateContext(connection))
         {
             await context.IngredientTypes.AddAsync(type);
             await context.Bottles.AddRangeAsync(bottle1, bottle2);
@@ -91,7 +105,7 @@ public class BottleServiceTests
 
         // Act
         List<Bottle> result;
-        await using (var context = new CocktailDbContext(options))
+        await using (var context = CreateContext(connection))
         {
             var service = new BottleService(context);
             result = await service.GetBottlesWithTypeAsync();
@@ -108,13 +122,14 @@ public class BottleServiceTests
     public async Task GetBottlesOfTypeAsync_ReturnsOnlyBottlesOfSpecifiedType()
     {
         // Arrange
-        var options = CreateInMemoryOptions(nameof(GetBottlesOfTypeAsync_ReturnsOnlyBottlesOfSpecifiedType));
+        await using var connection = CreateOpenConnection();
+
         var type1 = new IngredientType { Id = 1, Name = "Gin", IsTracked = true };
         var type2 = new IngredientType { Id = 2, Name = "Vodka", IsTracked = true };
         var bottle1 = new Bottle { Id = 1, Name = "Gin Bottle", TypeId = 1, Type = type1 };
         var bottle2 = new Bottle { Id = 2, Name = "Vodka Bottle", TypeId = 2, Type = type2 };
 
-        await using (var context = new CocktailDbContext(options))
+        await using (var context = CreateContext(connection))
         {
             await context.IngredientTypes.AddRangeAsync(type1, type2);
             await context.Bottles.AddRangeAsync(bottle1, bottle2);
@@ -123,7 +138,7 @@ public class BottleServiceTests
 
         // Act
         List<Bottle> result;
-        await using (var context = new CocktailDbContext(options))
+        await using (var context = CreateContext(connection))
         {
             var service = new BottleService(context);
             result = await service.GetBottlesOfTypeAsync(1);
@@ -138,11 +153,12 @@ public class BottleServiceTests
     public async Task DeleteBottleAsync_RemovesBottleFromDatabase()
     {
         // Arrange
-        var options = CreateInMemoryOptions(nameof(DeleteBottleAsync_RemovesBottleFromDatabase));
+        await using var connection = CreateOpenConnection();
+
         var type = new IngredientType { Id = 1, Name = "Gin", IsTracked = true };
         var bottle = new Bottle { Id = 1, Name = "To Delete", TypeId = 1, Type = type };
 
-        await using (var context = new CocktailDbContext(options))
+        await using (var context = CreateContext(connection))
         {
             await context.IngredientTypes.AddAsync(type);
             await context.Bottles.AddAsync(bottle);
@@ -150,14 +166,14 @@ public class BottleServiceTests
         }
 
         // Act
-        await using (var context = new CocktailDbContext(options))
+        await using (var context = CreateContext(connection))
         {
             var service = new BottleService(context);
             await service.DeleteBottleAsync(1);
         }
 
         // Assert
-        await using (var context = new CocktailDbContext(options))
+        await using (var context = CreateContext(connection))
         {
             Assert.Empty(await context.Bottles.ToListAsync());
         }
@@ -167,11 +183,13 @@ public class BottleServiceTests
     public async Task UpdateBottleFillLevelAsync_UpdatesFillLevel()
     {
         // Arrange
-        var options = CreateInMemoryOptions(nameof(UpdateBottleFillLevelAsync_UpdatesFillLevel));
-        var type = new IngredientType { Id = 1, Name = "Gin", IsTracked = true };
-        var bottle = new Bottle { Id = 1, Name = "Test Bottle", FillLevel = FillLevel.Full, TypeId = 1, Type = type };
+        await using var connection = CreateOpenConnection();
 
-        await using (var context = new CocktailDbContext(options))
+        var type = new IngredientType { Id = 1, Name = "Gin", IsTracked = true };
+        var bottle = new Bottle
+            { Id = 1, Name = "Test Bottle", FillLevel = FillLevel.Full, TypeId = 1, Type = type };
+
+        await using (var context = CreateContext(connection))
         {
             await context.IngredientTypes.AddAsync(type);
             await context.Bottles.AddAsync(bottle);
@@ -179,14 +197,14 @@ public class BottleServiceTests
         }
 
         // Act
-        await using (var context = new CocktailDbContext(options))
+        await using (var context = CreateContext(connection))
         {
             var service = new BottleService(context);
             await service.UpdateBottleFillLevelAsync(1, FillLevel.Quarter);
         }
 
         // Assert
-        await using (var context = new CocktailDbContext(options))
+        await using (var context = CreateContext(connection))
         {
             var updatedBottle = await context.Bottles.SingleAsync();
             Assert.Equal(FillLevel.Quarter, updatedBottle.FillLevel);
@@ -197,11 +215,12 @@ public class BottleServiceTests
     public async Task UpdateBottleFillLevelAsync_WithInvalidId_ThrowsException()
     {
         // Arrange
-        var options = CreateInMemoryOptions(nameof(UpdateBottleFillLevelAsync_WithInvalidId_ThrowsException));
+        await using var connection = CreateOpenConnection();
 
         // Act & Assert
-        await using var context = new CocktailDbContext(options);
+        await using var context = CreateContext(connection);
         var service = new BottleService(context);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => service.UpdateBottleFillLevelAsync(999, FillLevel.Quarter));
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.UpdateBottleFillLevelAsync(999, FillLevel.Quarter));
     }
 }

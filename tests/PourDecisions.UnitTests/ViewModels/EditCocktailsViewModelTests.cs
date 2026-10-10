@@ -1,10 +1,11 @@
+using System.Reflection;
+using FluentAvalonia.UI.Controls;
 using NSubstitute;
 using PourDecisions.Application.Models;
 using PourDecisions.Application.Services;
 using PourDecisions.Core.Entities;
 using PourDecisions.Desktop.Services;
 using PourDecisions.Desktop.ViewModels;
-using FluentAvalonia.UI.Controls;
 
 namespace PourDecisions.UnitTests.ViewModels;
 
@@ -47,7 +48,8 @@ public class EditCocktailsViewModelTests
         };
         _cocktailService.GetAllSummariesAsync().Returns(summaries);
         _ingredientService.GetIngredientTypeNamesAsync().Returns(new List<string> { "Gin" });
-        _cocktailService.GetWithIngredientsAsync(1).Returns(new Cocktail { Id = 1, Name = "Martini", CocktailIngredients = new List<CocktailIngredient>() });
+        _cocktailService.GetWithIngredientsAsync(1).Returns(new Cocktail
+            { Id = 1, Name = "Martini", CocktailIngredients = new List<CocktailIngredient>() });
 
         var viewModel = new EditCocktailsViewModel(_cocktailService, _dialogService, _ingredientService);
         await viewModel.LoadAsync();
@@ -56,7 +58,7 @@ public class EditCocktailsViewModelTests
         viewModel.SelectedCocktail = viewModel.CocktailSummaries[1];
 
         // Assert
-        await Task.Delay(100); 
+        await Task.Delay(100);
 
         Assert.NotNull(viewModel.CocktailEditItemViewModel);
         Assert.Equal("Edit cocktail: 'Martini'", viewModel.CocktailEditItemViewModel.Header);
@@ -68,26 +70,30 @@ public class EditCocktailsViewModelTests
         // Arrange
         _cocktailService.GetAllSummariesAsync().Returns(new List<CocktailEditSummary>());
         _ingredientService.GetIngredientTypeNamesAsync().Returns(new List<string>());
-        _cocktailService.AddCocktailAsync(Arg.Any<string>(), Arg.Any<IList<CocktailIngredientSummary>>(), Arg.Any<string>()).Returns(2);
+        _cocktailService
+            .AddCocktailAsync(Arg.Any<string>(), Arg.Any<IList<CocktailIngredientSummary>>(), Arg.Any<string>())
+            .Returns(2);
         var newSummary = new CocktailEditSummary(2, "New One", false);
         _cocktailService.GetSummaryAsync(2).Returns(newSummary);
 
         var viewModel = new EditCocktailsViewModel(_cocktailService, _dialogService, _ingredientService);
         await viewModel.LoadAsync();
-        
+
         // Trigger loading the form for <New Cocktail>
         viewModel.SelectedCocktail = viewModel.CocktailSummaries[0];
         await Task.Delay(100);
 
         // Act
         // Simulate SaveCocktailClicked event from the child view model
-        var saveMethod = viewModel.GetType().GetMethod("OnSaveCocktailClicked", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var saveMethod = viewModel.GetType()
+            .GetMethod("OnSaveCocktailClicked", BindingFlags.NonPublic | BindingFlags.Instance);
         saveMethod!.Invoke(viewModel, [null, "New One", new List<CocktailIngredientSummary>(), "Instructions"]);
 
         await Task.Delay(100);
 
         // Assert
-        await _cocktailService.Received(1).AddCocktailAsync("New One", Arg.Any<IList<CocktailIngredientSummary>>(), "Instructions");
+        await _cocktailService.Received(1)
+            .AddCocktailAsync("New One", Arg.Any<IList<CocktailIngredientSummary>>(), "Instructions");
         Assert.Contains(newSummary, viewModel.CocktailSummaries);
         Assert.Equal(newSummary, viewModel.SelectedCocktail);
     }
@@ -99,13 +105,15 @@ public class EditCocktailsViewModelTests
         var summary = new CocktailEditSummary(1, "Martini", false);
         _cocktailService.GetAllSummariesAsync().Returns(new List<CocktailEditSummary> { summary });
         _ingredientService.GetIngredientTypeNamesAsync().Returns(new List<string>());
-        _cocktailService.GetWithIngredientsAsync(1).Returns(new Cocktail { Id = 1, Name = "Martini", CocktailIngredients = new List<CocktailIngredient>() });
-        _dialogService.ShowConfirmationDialogAsync(Arg.Any<string>(), Arg.Any<string>(), "Delete", "Cancel")
+        _cocktailService.GetWithIngredientsAsync(1).Returns(new Cocktail
+            { Id = 1, Name = "Martini", CocktailIngredients = new List<CocktailIngredient>() });
+        _dialogService.ShowConfirmationDialogAsync(Arg.Any<string>(), Arg.Any<string>(), "Delete", "Cancel",
+                Arg.Any<FAContentDialogButton>())
             .Returns(FAContentDialogResult.Primary);
 
         var viewModel = new EditCocktailsViewModel(_cocktailService, _dialogService, _ingredientService);
         await viewModel.LoadAsync();
-        
+
         viewModel.SelectedCocktail = viewModel.CocktailSummaries[1];
         await Task.Delay(100);
 

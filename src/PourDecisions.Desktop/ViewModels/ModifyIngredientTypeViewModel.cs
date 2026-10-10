@@ -39,12 +39,22 @@ public partial class ModifyIngredientTypeViewModel(IngredientType ingredientType
     [RelayCommand]
     private void Rename()
     {
+        if (IsBusy)
+        {
+            return;
+        }
+
         RenameButtonClicked?.Invoke(this);
     }
 
     [RelayCommand]
     private void Delete()
     {
+        if (IsBusy)
+        {
+            return;
+        }
+
         DeleteButtonClicked?.Invoke(this);
     }
 }
