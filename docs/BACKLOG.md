@@ -67,7 +67,7 @@
 - PD-004 absorbed into this ticket — no separate detail page or back navigation
 - `CocktailsSummaryViewModel` is a pure display model: no infrastructure dependencies, exposes `event Action<int, bool>? FavoriteToggled` raised in `OnIsFavoriteChanged`
 - `CocktailsViewModel` owns persistence — subscribes to `FavoriteToggled` on each summary VM after construction, calls `ICocktailService.SetFavoriteAsync` via fire-and-forget (`_ =`)
-- `LoadAsync` fires `GetAllWithIngredientsAsync` and `GetCocktailAvailabilityAsync` concurrently via `Task.WhenAll`
+- `LoadAsync` awaits `GetAllWithIngredientsAsync` and `GetCocktailAvailabilityAsync` sequentially (originally concurrent via `Task.WhenAll`; changed during PD-009 because the services share one scoped `DbContext`, which is not safe for concurrent use)
 - `ICocktailService.GetAllWithIngredientsAsync` uses `.Include(c => c.CocktailIngredients).ThenInclude(ci => ci.Type)`
 - Availability status colour coded via `AvailabilityStatusToColorConverter` in `Converters/`
 - `CheckBox.Content` used for inline labels — no nested Grid required
@@ -158,7 +158,7 @@ Detail view is the right panel of the master/detail layout implemented in PD-003
 
 ### ~~PD-008 · Delete Cocktail~~ — absorbed into PD-007 ✅
 
-### PD-007a · Success Notifications (Toast / InfoBar)
+### PD-007a · Success Notifications (Toast / InfoBar) ✅
 **Priority:** P2 — follow-on from PD-007
 
 **Goal:** Provide transient non-blocking feedback after save, add, and delete operations. Currently these operations complete silently.
@@ -175,31 +175,78 @@ Detail view is the right panel of the master/detail layout implemented in PD-003
 
 ---
 
-### PD-009 · Settings Screen
+### PD-009 · Settings Screen ✅
 **Priority:** P3
 
-**Goal:** Placeholder settings screen wired into the nav.
+**Goal:** Settings screen wired into the nav, hosting app info and ingredient type management. Built together with PD-009a — on its own this ticket would have been an empty shell.
 
 **Acceptance criteria:**
 - Accessible from side nav
-- For now: app version display and a "Manage Ingredient Types" sub-section (rename/delete types not yet covered elsewhere)
+- Shows app version (read from assembly metadata, not hard-coded)
+- Hosts the "Manage ingredient types" section (PD-009a)
 
 ---
 
-### PD-009a · Manage Ingredient Types (Settings)
+### PD-009a · Manage Ingredient Types (Settings) ✅
 **Priority:** P3 — depends on PD-009 shell
 
 **Goal:** Allow the user to manage ingredient types from the Settings screen.
 
 **Acceptance criteria:**
-- List all ingredient types (tracked and untracked)
-- Rename a type
-- Delete a type (with confirmation; warn if type is referenced by cocktail recipes)
-- Toggle `IsTracked` per type
+- List all ingredient types (tracked and untracked), alphabetically
+- Rename a type — normalised like every other type name, case-insensitive uniqueness enforced
+- Delete a type — **blocked** if any cocktail recipe uses it (lists the cocktails); if only bottles exist, confirmation lists the bottles that will also be deleted
+- Toggle `IsTracked` per type — untracking a type with bottles asks for confirmation listing the bottles that will be deleted
+
+**Decisions made during implementation:**
+- **Recipes-in-use blocks deletion outright** (stricter than the original "warn" wording — a warning that lets the user proceed would silently break recipes). Enforced twice: by `IngredientService` and by the schema (`CocktailIngredient → IngredientType` FK changed from `Cascade` to `Restrict`, migration `AddIngredientTypeDeleteRestriction`).
+- **Untracking deletes the type's bottles** (after confirmation) instead of blocking. New invariant: *an untracked type never has bottles*. `AddBottleAsync` already upholds the reverse (adding a bottle tracks the type).
+- **Case-insensitive uniqueness is enforced by the database**: `IngredientType.Name` uses `COLLATE NOCASE` (migration `AddIngredientTypeNameNoCaseCollation`), so the unique index rejects "Lime juice" / "Lime Juice". Comparisons in code are plain equality — no `ToLower()` needed.
+- **Business rules live in `IngredientService`, not the ViewModel.** Destructive operations follow a **preview → confirm → execute** flow (`PreviewIngredientTypeModifyAsync`, then `DeleteIngredientTypeAsync` / `UpdateIngredientTypeTrackedAsync` with an explicit `allowWithBottles` acknowledgement). Execute re-checks the rules; the preview is advisory only. See `ARCHITECTURE.md` → *Destructive Operations*.
+- **Rename returns a `Result`**, not an exception, and the rename itself is the validation: the input dialog stays open on failure and shows the service's message (`ShowInputDialogAsync` takes an async submit callback and uses a FluentAvalonia deferral). The service owns normalisation; the ViewModel updates the row from the normalised name it gets back.
+- **Tracked toggle uses `ManualCheckBox`** (a `CheckBox` that never toggles itself). The click raises a command, the parent runs the flow, and `IsTracked` changes only on success — cancel therefore needs no revert. `CheckBox` and `ToggleButton` both flip their own state locally, which overrides a one-way binding.
+- **Row VM re-entry protection via public `IsBusy`**, pushed in by the parent and reset in `finally`. Events never return values; the parent pushes results back into the row.
+- **Destructive confirmations default to Cancel** (`FAContentDialogButton.Close`): cocktail delete, bottle delete, ingredient type delete, untrack.
+
+**Bug fixed along the way:** saving an edited cocktail in Edit Cocktails left it at its old list position when the name changed. The list now re-sorts via the new `MoveInSorted` extension.
+
+**Known limitations (accepted):**
+- The consent flag is a bare bool, not tied to the exact bottle list the user saw — a bottle added between dialog and confirm would be deleted unseen. Acceptable for a single-user desktop app.
+- Tracking a type that has no bottles makes every recipe using it unavailable with no warning (see PD-009c).
+- The `NOCASE` migration rebuilds a unique index; a database that already holds case-duplicate type names will fail to migrate. Check for duplicates before upgrading an existing DB (see PD-009b).
+
+---
+
+### PD-009b · Merge Ingredient Types
+**Priority:** P3 — follow-up to PD-009a
+
+**Goal:** Resolve near-duplicate types (e.g. "Lime juice" / "Lime Juice") and rename collisions by merging instead of blocking.
+
+**Acceptance criteria:**
+- Merge type A into type B: repoint `CocktailIngredient` and `Bottle` rows to B, then delete A, atomically
+- Rename that collides with an existing name offers "merge instead" rather than only an error
+- Preview shows how many recipes and bottles are affected
+- Duplicate recipe rows after merge (same cocktail now uses B twice) are handled explicitly
 
 **Notes:**
-- Untracked types created via the cocktail recipe editor (PD-007) will accumulate over time; this screen is the escape hatch for managing them
-- Deleting a type that is referenced by cocktail ingredients should warn the user — hard delete would silently break those recipes
+- Also the natural place for a data step guarding the `NOCASE` migration against existing case-duplicates
+- Own ticket because its risk profile (bulk repointing) differs from rename/delete; needs service tests against in-memory SQLite
+
+---
+
+### PD-009c · Settings Polish
+**Priority:** P3 — follow-up to PD-009a
+
+**Goal:** Make the ingredient type screen useful as a cleanup tool.
+
+**Acceptance criteria:**
+- Per-row bottle count and recipe count (single projection query)
+- Search box and filter chips: All / Tracked / Untracked / Unused (no bottles, no recipes)
+- Success notification after rename / delete / tracked change, using the PD-007a pattern (success is currently silent, failures use blocking dialogs)
+- Optional: before tracking a type with no bottles, show "this will make N cocktails unavailable"
+
+**Notes:**
+- Counts and the availability preview can reuse the same impact query that backs the preview/execute flow
 
 ---
 
@@ -212,3 +259,18 @@ Detail view is the right panel of the master/detail layout implemented in PD-003
 - Serving history / logbook
 - Recipe scaling
 - Cocktail images — `ImagePath` column already in schema, UI placeholder reserved in detail panel; needs file picker, copy-on-select, thumbnail preview in form, wiring in detail panel
+
+---
+
+## Raised in Review (not yet ticketed)
+*(Product and architecture observations from backlog reviews — decide, then ticket or drop)*
+
+- **Database location** — currently next to the executable; breaks when install dir is write-protected and risks data loss on reinstall. Move to `LocalApplicationData` with one-time migration of an existing file.
+- **Import / export with starter library** — versioned JSON from day one, explicit conflict policy (skip / overwrite / merge by name), bundled IBA classics so a release build isn't empty on first run. Doubles as backup.
+- **`FillLevel` has no consumer** — feed it into the shopping list ("running low") or reconsider tracking it.
+- **"Unlock" view** — "buying Campari unlocks 4 cocktails"; mostly a grouping query over `MissingRequiredCount`.
+- **Type equivalence** — recipes accepting "bourbon or rye" don't fit strict type-based availability. Decide between equivalence groups, a type hierarchy, or keeping types coarse.
+- **Scope / change-tracker lifetime** — verify how DI scopes are created; a long-lived scope keeps stale tracked entities across page reloads. Use `AsNoTracking` on read queries or `IDbContextFactory`.
+- **Tests and CI** — service tests on in-memory SQLite (`NOCASE`, `Restrict` FK, delete/untrack rules, rename outcomes), unit tests for `MoveInSorted`; CI build running tests and a migrations-up-to-date check.
+- **Edit bottle** — currently delete and re-add.
+- **Tracked-type preview** — see PD-009c.
