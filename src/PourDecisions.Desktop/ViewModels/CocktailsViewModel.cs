@@ -56,23 +56,8 @@ public partial class CocktailsViewModel(
 
     public async Task LoadAsync()
     {
-        var cocktailTask = cocktailService.GetAllWithIngredientsAsync();
-        var availabilityTask = availabilityService.GetCocktailAvailabilityAsync();
-
-        foreach (var vm in _allCocktails)
-        {
-            vm.FavoriteToggled -= OnFavoriteToggled;
-        }
-
-        foreach (var vm in _allTrackedIngredients)
-        {
-            vm.SelectionChanged -= OnIngredientSelectionChanged;
-        }
-
-        await Task.WhenAll(cocktailTask, availabilityTask);
-
-        var cocktails = cocktailTask.Result;
-        var cocktailAvailability = availabilityTask.Result;
+        var cocktails = await cocktailService.GetAllWithIngredientsAsync();
+        var cocktailAvailability = await availabilityService.GetCocktailAvailabilityAsync();
 
         _allCocktails = cocktails
             .Select(cocktail =>

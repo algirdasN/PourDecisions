@@ -10,7 +10,8 @@ namespace PourDecisions.Desktop.ViewModels;
 public partial class IngredientTypeViewModel : ViewModelBase
 {
     public static readonly Comparer<IngredientTypeViewModel> NameComparer =
-        Comparer<IngredientTypeViewModel>.Create((x, y) => string.Compare(x.Name, y.Name, StringComparison.Ordinal));
+        Comparer<IngredientTypeViewModel>.Create((x, y) =>
+            string.Compare(x.Name, y.Name, StringComparison.OrdinalIgnoreCase));
 
     public readonly int Id;
     public readonly string Name;

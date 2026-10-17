@@ -234,4 +234,141 @@ public class ListExtensionsTests
         Assert.NotSame(original, result);
         Assert.Equal(original, result);
     }
+
+    [Fact]
+    public void MoveInSorted_ItemNotFound_ListRemainsUnchanged()
+    {
+        var item1 = new Item("Apple");
+        var item2 = new Item("Banana");
+        var notInList = new Item("Cherry");
+        var list = new ObservableCollection<Item> { item1, item2 };
+        var comparer = Comparer<Item>.Create((a, b) => string.Compare(a.Name, b.Name, StringComparison.Ordinal));
+
+        list.MoveInSorted(notInList, comparer);
+
+        Assert.Equal([item1, item2], list);
+    }
+
+    [Fact]
+    public void MoveInSorted_AlreadyInCorrectPosition_ListRemainsUnchanged()
+    {
+        var item1 = new Item("Apple");
+        var item2 = new Item("Banana");
+        var item3 = new Item("Cherry");
+        var list = new ObservableCollection<Item> { item1, item2, item3 };
+        var comparer = Comparer<Item>.Create((a, b) => string.Compare(a.Name, b.Name, StringComparison.Ordinal));
+
+        list.MoveInSorted(item2, comparer);
+
+        Assert.Equal([item1, item2, item3], list);
+    }
+
+    [Fact]
+    public void MoveInSorted_ObservableCollection_MoveToEarlierPosition()
+    {
+        var item1 = new Item("Apple");
+        var item2 = new Item("Banana");
+        var item3 = new Item("Cherry");
+        var list = new ObservableCollection<Item> { item1, item2, item3 };
+        var comparer = Comparer<Item>.Create((a, b) => string.Compare(a.Name, b.Name, StringComparison.Ordinal));
+
+        // Mutate item3 so it belongs before item1
+        item3.Name = "Aardvark";
+        list.MoveInSorted(item3, comparer);
+
+        Assert.Equal([item3, item1, item2], list);
+    }
+
+    [Fact]
+    public void MoveInSorted_ObservableCollection_MoveToLaterPosition()
+    {
+        var item1 = new Item("Apple");
+        var item2 = new Item("Banana");
+        var item3 = new Item("Cherry");
+        var list = new ObservableCollection<Item> { item1, item2, item3 };
+        var comparer = Comparer<Item>.Create((a, b) => string.Compare(a.Name, b.Name, StringComparison.Ordinal));
+
+        // Mutate item1 so it belongs after item3
+        item1.Name = "Date";
+        list.MoveInSorted(item1, comparer);
+
+        Assert.Equal([item2, item3, item1], list);
+    }
+
+    [Fact]
+    public void MoveInSorted_ConcreteList_MoveToEarlierPosition()
+    {
+        var item1 = new Item("Apple");
+        var item2 = new Item("Banana");
+        var item3 = new Item("Cherry");
+        IList<Item> list = new List<Item> { item1, item2, item3 };
+        var comparer = Comparer<Item>.Create((a, b) => string.Compare(a.Name, b.Name, StringComparison.Ordinal));
+
+        item3.Name = "Aardvark";
+        list.MoveInSorted(item3, comparer);
+
+        Assert.Equal([item3, item1, item2], list);
+    }
+
+    [Fact]
+    public void MoveInSorted_ConcreteList_MoveToLaterPosition()
+    {
+        var item1 = new Item("Apple");
+        var item2 = new Item("Banana");
+        var item3 = new Item("Cherry");
+        IList<Item> list = new List<Item> { item1, item2, item3 };
+        var comparer = Comparer<Item>.Create((a, b) => string.Compare(a.Name, b.Name, StringComparison.Ordinal));
+
+        item1.Name = "Date";
+        list.MoveInSorted(item1, comparer);
+
+        Assert.Equal([item2, item3, item1], list);
+    }
+
+    [Fact]
+    public void MoveInSorted_MoveToMiddle()
+    {
+        var item1 = new Item("Apple");
+        var item2 = new Item("Cherry");
+        var item3 = new Item("Elderberry");
+        var list = new ObservableCollection<Item> { item1, item2, item3 };
+        var comparer = Comparer<Item>.Create((a, b) => string.Compare(a.Name, b.Name, StringComparison.Ordinal));
+
+        // Mutate item3 so it belongs between Apple and Cherry
+        item3.Name = "Banana";
+        list.MoveInSorted(item3, comparer);
+
+        Assert.Equal([item1, item3, item2], list);
+    }
+
+    [Fact]
+    public void MoveInSorted_WithDefaultComparer_Ints()
+    {
+        var list = new ObservableCollection<int> { 10, 20, 30, 40 };
+        // Replace element at index 3 with 15 (simulated by having 15 in the collection)
+        list[3] = 15;
+        list.MoveInSorted(15);
+
+        Assert.Equal([10, 15, 20, 30], list);
+    }
+
+    [Fact]
+    public void MoveInSorted_WithCustomDescendingComparer()
+    {
+        var descending = Comparer<int>.Create((a, b) => b.CompareTo(a));
+        var list = new ObservableCollection<int> { 40, 30, 20, 10 };
+        list[0] = 15;
+        list.MoveInSorted(15, descending);
+
+        Assert.Equal([30, 20, 15, 10], list);
+    }
+
+    // -------------------------------------------------------------------------
+    // MoveInSorted tests
+    // -------------------------------------------------------------------------
+
+    private class Item(string name)
+    {
+        public string Name { get; set; } = name;
+    }
 }

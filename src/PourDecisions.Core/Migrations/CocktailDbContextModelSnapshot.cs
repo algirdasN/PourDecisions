@@ -14,7 +14,7 @@ namespace PourDecisions.Core.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "10.0.3");
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.12");
 
             modelBuilder.Entity("PourDecisions.Core.Entities.Bottle", b =>
                 {
@@ -110,7 +110,8 @@ namespace PourDecisions.Core.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
 
                     b.HasKey("Id");
 
@@ -142,7 +143,7 @@ namespace PourDecisions.Core.Migrations
                     b.HasOne("PourDecisions.Core.Entities.IngredientType", "Type")
                         .WithMany("CocktailIngredients")
                         .HasForeignKey("TypeId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Cocktail");
