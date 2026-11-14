@@ -34,7 +34,14 @@ public interface IIngredientService
     /// </summary>
     /// <param name="id">The ID of the ingredient type to rename</param>
     /// <param name="newName">New name of the ingredient type.</param>
-    Task<Result<string>> RenameIngredientAsync(int id, string newName);
+    Task<RenameIngredientResult> RenameIngredientAsync(int id, string newName);
+
+    /// <summary>
+    /// Asynchronously merges two ingredient types into one.
+    /// </summary>
+    /// <param name="sourceId">The ID of the ingredient type to be merged.</param>
+    /// <param name="targetId">The ID of the ingredient type to merge into.</param>
+    Task<MergeIngredientResult> MergeIngredientTypesAsync(int sourceId, int targetId);
 
     /// <summary>
     /// Asynchronously previews the impact of modifying an ingredient type.
@@ -97,38 +104,87 @@ public class IngredientService(CocktailDbContext cocktailDbContext) : IIngredien
     }
 
     /// <inheritdoc/>
-    public async Task<Result<string>> RenameIngredientAsync(int id, string newName)
+    public async Task<RenameIngredientResult> RenameIngredientAsync(int id, string newName)
     {
         var normalizedName = newName.ToTitleCase();
 
         if (normalizedName.Length < 3)
         {
-            return Result<string>.Error("Ingredient type name must be at least 3 characters long.");
+            return new RenameIngredientResult.Error("Ingredient type name must be at least 3 characters long.");
         }
 
         var ingredientType = await cocktailDbContext.IngredientTypes.FirstOrDefaultAsync(type => type.Id == id);
 
         if (ingredientType is null)
         {
-            return Result<string>.Error($"Ingredient type with ID {id} not found.");
+            return new RenameIngredientResult.Error($"Ingredient type with ID {id} not found.");
         }
 
         if (normalizedName.Equals(ingredientType.Name, StringComparison.OrdinalIgnoreCase))
         {
-            return Result<string>.Error("Enter a new ingredient type name.");
+            return new RenameIngredientResult.Error("Enter a new ingredient type name.");
         }
 
         var nameExists = await cocktailDbContext.IngredientTypes
-            .AnyAsync(type => type.Id != id && type.Name == normalizedName);
+            .FirstOrDefaultAsync(type => type.Id != id && type.Name == normalizedName);
 
-        if (nameExists)
+        if (nameExists is not null)
         {
-            return Result<string>.Error($"Ingredient type '{normalizedName}' already exists.");
+            return new RenameIngredientResult.Collision(nameExists.Id);
         }
 
         ingredientType.Name = normalizedName;
         await cocktailDbContext.SaveChangesAsync();
-        return Result<string>.Success(normalizedName);
+        return new RenameIngredientResult.Success(normalizedName);
+    }
+
+    /// <inheritdoc/>
+    public async Task<MergeIngredientResult> MergeIngredientTypesAsync(int sourceId, int targetId)
+    {
+        if (sourceId == targetId)
+        {
+            return new MergeIngredientResult.Error("Cannot merge an ingredient type into itself.");
+        }
+
+        var sourceType = await cocktailDbContext.IngredientTypes.FirstOrDefaultAsync(type => type.Id == sourceId);
+        var targetType = await cocktailDbContext.IngredientTypes.FirstOrDefaultAsync(type => type.Id == targetId);
+
+        if (sourceType is null || targetType is null)
+        {
+            return new MergeIngredientResult.Error("One or both ingredient types not found.");
+        }
+
+        var cocktailsWithBothTypes = await cocktailDbContext.Cocktails
+            .Where(c => c.CocktailIngredients.Any(ci => ci.TypeId == sourceId)
+                        && c.CocktailIngredients.Any(ci => ci.TypeId == targetId))
+            .Select(c => c.Name)
+            .ToListAsync();
+
+        if (cocktailsWithBothTypes.Count > 0)
+        {
+            return new MergeIngredientResult.Collision(cocktailsWithBothTypes);
+        }
+
+        var bottlesToUpdate = await cocktailDbContext.Bottles.Where(b => b.TypeId == sourceId).ToListAsync();
+        foreach (var bottle in bottlesToUpdate)
+        {
+            bottle.TypeId = targetId;
+        }
+
+        var cocktailIngredientsToUpdate =
+            await cocktailDbContext.CocktailIngredients.Where(ci => ci.TypeId == sourceId).ToListAsync();
+        foreach (var ci in cocktailIngredientsToUpdate)
+        {
+            ci.TypeId = targetId;
+        }
+
+        targetType.IsTracked = targetType.IsTracked || sourceType.IsTracked;
+
+        cocktailDbContext.IngredientTypes.Remove(sourceType);
+
+        await cocktailDbContext.SaveChangesAsync();
+
+        return new MergeIngredientResult.Success();
     }
 
     /// <inheritdoc/>

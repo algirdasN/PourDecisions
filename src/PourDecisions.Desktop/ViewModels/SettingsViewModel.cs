@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Reflection;
 using CommunityToolkit.Mvvm.ComponentModel;
 using FluentAvalonia.UI.Controls;
+using PourDecisions.Application.Models;
 using PourDecisions.Application.Services;
 using PourDecisions.Desktop.Services;
 using PourDecisions.Shared.Extensions;
@@ -87,20 +88,70 @@ public partial class SettingsViewModel(IIngredientService ingredientService, IDi
 
         try
         {
-            _ = await dialogService.ShowInputDialogAsync($"Rename ingredient type '{ingredientVm.Name}'",
+            int? conflictId = null;
+            var newName = await dialogService.ShowInputDialogAsync($"Rename ingredient type '{ingredientVm.Name}'",
                 "Enter new name:", "Confirm", "Cancel", ingredientVm.Name,
                 async (value) =>
                 {
                     var result = await ingredientService.RenameIngredientAsync(ingredientVm.Id, value);
 
-                    if (result.IsSuccess)
+                    switch (result)
                     {
-                        ingredientVm.Name = result.Value;
-                        IngredientTypes.MoveInSorted(ingredientVm, ModifyIngredientTypeViewModel.NameComparer);
+                        case RenameIngredientResult.Success success:
+                            ingredientVm.Name = success.NewName;
+                            IngredientTypes.MoveInSorted(ingredientVm, ModifyIngredientTypeViewModel.NameComparer);
+                            return Result.Success();
+                        case RenameIngredientResult.Collision collision:
+                            conflictId = collision.ConflictId;
+                            return Result.Success();
+                        default:
+                            var errorMessage = result is RenameIngredientResult.Error error
+                                ? error.ErrorMessage
+                                : "Unknown error occurred.";
+                            return Result.Error(errorMessage);
                     }
-
-                    return result;
                 });
+
+            if (conflictId is null || newName is null)
+            {
+                return;
+            }
+
+            var dialogResult = await dialogService.ShowConfirmationDialogAsync("Merge ingredient types",
+                $"An ingredient type with the name '{newName}' already exists. Do you want to merge '{ingredientVm.Name}' into the existing ingredient type?",
+                "Merge", "Cancel", FAContentDialogButton.Close);
+
+            if (dialogResult == FAContentDialogResult.Primary)
+            {
+                var result = await ingredientService.MergeIngredientTypesAsync(ingredientVm.Id, conflictId.Value);
+
+                switch (result)
+                {
+                    case MergeIngredientResult.Success:
+                        if (ingredientVm.IsTracked)
+                        {
+                            IngredientTypes.FirstOrDefault(type => type.Id == conflictId.Value)?.IsTracked = true;
+                        }
+
+                        IngredientTypes.Remove(ingredientVm);
+                        return;
+                    case MergeIngredientResult.Collision collision:
+                        await dialogService.ShowInformationDialogAsync("Failed to merge ingredient types",
+                            $"""
+                             Cannot merge ingredient types. Both ingredient types are used in cocktails:
+                             {string.Join(Environment.NewLine, collision.CocktailNames.Select(c => $" - {c}"))}
+                             """);
+                        return;
+                    default:
+                        var errorMessage = result is MergeIngredientResult.Error error
+                            ? error.ErrorMessage
+                            : "Unknown error occurred.";
+
+                        await dialogService.ShowInformationDialogAsync("Failed to merge ingredient types",
+                            errorMessage);
+                        return;
+                }
+            }
         }
         catch (Exception e)
         {
