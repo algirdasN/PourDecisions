@@ -89,7 +89,8 @@ public partial class SettingsViewModel(IIngredientService ingredientService, IDi
         try
         {
             int? conflictId = null;
-            var newName = await dialogService.ShowInputDialogAsync($"Rename ingredient type '{ingredientVm.Name}'",
+            string? newName = null;
+            _ = await dialogService.ShowInputDialogAsync($"Rename ingredient type '{ingredientVm.Name}'",
                 "Enter new name:", "Confirm", "Cancel", ingredientVm.Name,
                 async (value) =>
                 {
@@ -98,10 +99,12 @@ public partial class SettingsViewModel(IIngredientService ingredientService, IDi
                     switch (result)
                     {
                         case RenameIngredientResult.Success success:
+                            newName = success.NewName;
                             ingredientVm.Name = success.NewName;
                             IngredientTypes.MoveInSorted(ingredientVm, ModifyIngredientTypeViewModel.NameComparer);
                             return Result.Success();
-                        case RenameIngredientResult.Collision collision:
+                        case RenameIngredientResult.NameCollision collision:
+                            newName = collision.NewName;
                             conflictId = collision.ConflictId;
                             return Result.Success();
                         default:
@@ -127,19 +130,16 @@ public partial class SettingsViewModel(IIngredientService ingredientService, IDi
 
                 switch (result)
                 {
-                    case MergeIngredientResult.Success:
-                        if (ingredientVm.IsTracked)
-                        {
-                            IngredientTypes.FirstOrDefault(type => type.Id == conflictId.Value)?.IsTracked = true;
-                        }
-
+                    case MergeIngredientResult.Success success:
+                        IngredientTypes.FirstOrDefault(type => type.Id == conflictId.Value)?.IsTracked =
+                            success.IsTargetTracked;
                         IngredientTypes.Remove(ingredientVm);
                         return;
-                    case MergeIngredientResult.Collision collision:
+                    case MergeIngredientResult.RecipeConflict conflict:
                         await dialogService.ShowInformationDialogAsync("Failed to merge ingredient types",
                             $"""
                              Cannot merge ingredient types. Both ingredient types are used in cocktails:
-                             {string.Join(Environment.NewLine, collision.CocktailNames.Select(c => $" - {c}"))}
+                             {string.Join(Environment.NewLine, conflict.CocktailNames.Select(c => $" - {c}"))}
                              """);
                         return;
                     default:

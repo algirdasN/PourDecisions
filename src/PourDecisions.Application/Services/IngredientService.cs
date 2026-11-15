@@ -130,7 +130,7 @@ public class IngredientService(CocktailDbContext cocktailDbContext) : IIngredien
 
         if (nameExists is not null)
         {
-            return new RenameIngredientResult.Collision(nameExists.Id);
+            return new RenameIngredientResult.NameCollision(normalizedName, nameExists.Id);
         }
 
         ingredientType.Name = normalizedName;
@@ -162,13 +162,18 @@ public class IngredientService(CocktailDbContext cocktailDbContext) : IIngredien
 
         if (cocktailsWithBothTypes.Count > 0)
         {
-            return new MergeIngredientResult.Collision(cocktailsWithBothTypes);
+            return new MergeIngredientResult.RecipeConflict(cocktailsWithBothTypes);
         }
 
         var bottlesToUpdate = await cocktailDbContext.Bottles.Where(b => b.TypeId == sourceId).ToListAsync();
         foreach (var bottle in bottlesToUpdate)
         {
             bottle.TypeId = targetId;
+        }
+
+        if (sourceType.IsTracked && bottlesToUpdate.Count > 0)
+        {
+            targetType.IsTracked = true;
         }
 
         var cocktailIngredientsToUpdate =
@@ -178,13 +183,11 @@ public class IngredientService(CocktailDbContext cocktailDbContext) : IIngredien
             ci.TypeId = targetId;
         }
 
-        targetType.IsTracked = targetType.IsTracked || sourceType.IsTracked;
-
         cocktailDbContext.IngredientTypes.Remove(sourceType);
 
         await cocktailDbContext.SaveChangesAsync();
 
-        return new MergeIngredientResult.Success();
+        return new MergeIngredientResult.Success(targetType.IsTracked);
     }
 
     /// <inheritdoc/>
