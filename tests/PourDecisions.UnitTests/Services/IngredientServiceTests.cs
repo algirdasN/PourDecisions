@@ -175,7 +175,7 @@ public class IngredientServiceTests
         }
 
         // Act
-        Result result;
+        RenameIngredientResult result;
         await using (var context = CreateContext(connection))
         {
             var service = new IngredientService(context);
@@ -183,8 +183,8 @@ public class IngredientServiceTests
         }
 
         // Assert
-        Assert.False(result.IsSuccess);
-        Assert.Equal("Ingredient type name must be at least 3 characters long.", result.ErrorMessage);
+        var error = Assert.IsType<RenameIngredientResult.Error>(result);
+        Assert.Equal("Ingredient type name must be at least 3 characters long.", error.ErrorMessage);
     }
 
 
@@ -195,7 +195,7 @@ public class IngredientServiceTests
         await using var connection = CreateOpenConnection();
 
         // Act
-        Result result;
+        RenameIngredientResult result;
         await using (var context = CreateContext(connection))
         {
             var service = new IngredientService(context);
@@ -203,8 +203,8 @@ public class IngredientServiceTests
         }
 
         // Assert
-        Assert.False(result.IsSuccess);
-        Assert.Equal("Ingredient type with ID 999 not found.", result.ErrorMessage);
+        var error = Assert.IsType<RenameIngredientResult.Error>(result);
+        Assert.Equal("Ingredient type with ID 999 not found.", error.ErrorMessage);
     }
 
     [Fact]
@@ -222,7 +222,7 @@ public class IngredientServiceTests
         }
 
         // Act
-        Result result;
+        RenameIngredientResult result;
         await using (var context = CreateContext(connection))
         {
             var service = new IngredientService(context);
@@ -230,8 +230,8 @@ public class IngredientServiceTests
         }
 
         // Assert
-        Assert.False(result.IsSuccess);
-        Assert.Equal("Enter a new ingredient type name.", result.ErrorMessage);
+        var error = Assert.IsType<RenameIngredientResult.Error>(result);
+        Assert.Equal("Enter a new ingredient type name.", error.ErrorMessage);
     }
 
     [Fact]
@@ -250,7 +250,7 @@ public class IngredientServiceTests
         }
 
         // Act
-        Result result;
+        RenameIngredientResult result;
         await using (var context = CreateContext(connection))
         {
             var service = new IngredientService(context);
@@ -258,8 +258,9 @@ public class IngredientServiceTests
         }
 
         // Assert
-        Assert.False(result.IsSuccess);
-        Assert.Equal("Ingredient type 'Vodka' already exists.", result.ErrorMessage);
+        var collision = Assert.IsType<RenameIngredientResult.NameCollisionCanMerge>(result);
+        Assert.Equal("Vodka", collision.NewName);
+        Assert.Equal(2, collision.ConflictId);
     }
 
     [Fact]
@@ -277,7 +278,7 @@ public class IngredientServiceTests
         }
 
         // Act
-        Result<string> result;
+        RenameIngredientResult result;
         await using (var context = CreateContext(connection))
         {
             var service = new IngredientService(context);
@@ -287,8 +288,8 @@ public class IngredientServiceTests
         // Assert
         await using (var context = CreateContext(connection))
         {
-            Assert.True(result.IsSuccess);
-            Assert.Equal("London Dry Gin", result.Value);
+            var success = Assert.IsType<RenameIngredientResult.Success>(result);
+            Assert.Equal("London Dry Gin", success.NewName);
 
             var updated = await context.IngredientTypes.FindAsync(1);
             Assert.NotNull(updated);

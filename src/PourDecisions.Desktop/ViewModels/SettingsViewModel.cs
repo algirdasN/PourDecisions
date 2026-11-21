@@ -9,7 +9,10 @@ using PourDecisions.Shared.Extensions;
 
 namespace PourDecisions.Desktop.ViewModels;
 
-public partial class SettingsViewModel(IIngredientService ingredientService, IDialogService dialogService)
+public partial class SettingsViewModel(
+    IIngredientService ingredientService,
+    IDialogService dialogService,
+    IToastService toastService)
     : ViewModelBase, IAsyncLoadable
 {
     [ObservableProperty]
@@ -99,6 +102,8 @@ public partial class SettingsViewModel(IIngredientService ingredientService, IDi
                     switch (result)
                     {
                         case RenameIngredientResult.Success success:
+                            toastService.ShowSuccess(
+                                $"Successfully renamed ingredient type '{ingredientVm.Name}' to '{success.NewName}'");
                             newName = success.NewName;
                             ingredientVm.Name = success.NewName;
                             IngredientTypes.MoveInSorted(ingredientVm, ModifyIngredientTypeViewModel.NameComparer);
@@ -138,6 +143,8 @@ public partial class SettingsViewModel(IIngredientService ingredientService, IDi
                 switch (result)
                 {
                     case MergeIngredientResult.Success success:
+                        toastService.ShowSuccess(
+                            $"Successfully merged ingredient type '{ingredientVm.Name}' into '{newName}'");
                         IngredientTypes.FirstOrDefault(type => type.Id == conflictId.Value)?.IsTracked =
                             success.IsTargetTracked;
                         IngredientTypes.Remove(ingredientVm);
@@ -212,6 +219,8 @@ public partial class SettingsViewModel(IIngredientService ingredientService, IDi
             await ingredientService.DeleteIngredientTypeAsync(ingredientVm.Id, true);
 
             IngredientTypes.Remove(IngredientTypes.First(type => type.Id == ingredientVm.Id));
+
+            toastService.ShowWarning($"Successfully deleted ingredient type '{ingredientVm.Name}'");
         }
         catch (Exception e)
         {
