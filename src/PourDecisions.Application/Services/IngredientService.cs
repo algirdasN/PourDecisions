@@ -125,12 +125,16 @@ public class IngredientService(CocktailDbContext cocktailDbContext) : IIngredien
             return new RenameIngredientResult.Error("Enter a new ingredient type name.");
         }
 
-        var nameExists = await cocktailDbContext.IngredientTypes
+        var existingCocktail = await cocktailDbContext.IngredientTypes
             .FirstOrDefaultAsync(type => type.Id != id && type.Name == normalizedName);
 
-        if (nameExists is not null)
+        if (existingCocktail is not null)
         {
-            return new RenameIngredientResult.NameCollision(normalizedName, nameExists.Id);
+            var cocktailsBlockingMerge = await CocktailsBlockingMergeAsync(id, existingCocktail.Id);
+
+            return cocktailsBlockingMerge.Count > 0
+                ? new RenameIngredientResult.NameCollisionMergeBlocked(cocktailsBlockingMerge)
+                : new RenameIngredientResult.NameCollisionCanMerge(normalizedName, existingCocktail.Id);
         }
 
         ingredientType.Name = normalizedName;
@@ -154,11 +158,7 @@ public class IngredientService(CocktailDbContext cocktailDbContext) : IIngredien
             return new MergeIngredientResult.Error("One or both ingredient types not found.");
         }
 
-        var cocktailsWithBothTypes = await cocktailDbContext.Cocktails
-            .Where(c => c.CocktailIngredients.Any(ci => ci.TypeId == sourceId)
-                        && c.CocktailIngredients.Any(ci => ci.TypeId == targetId))
-            .Select(c => c.Name)
-            .ToListAsync();
+        var cocktailsWithBothTypes = await CocktailsBlockingMergeAsync(sourceId, targetId);
 
         if (cocktailsWithBothTypes.Count > 0)
         {
@@ -263,5 +263,14 @@ public class IngredientService(CocktailDbContext cocktailDbContext) : IIngredien
             cocktailDbContext.IngredientTypes.Remove(ingredientType);
             await cocktailDbContext.SaveChangesAsync();
         }
+    }
+
+    private async Task<List<string>> CocktailsBlockingMergeAsync(int sourceId, int targetId)
+    {
+        return await cocktailDbContext.Cocktails
+            .Where(cocktail => cocktail.CocktailIngredients.Any(ingredient => ingredient.TypeId == sourceId)
+                               && cocktail.CocktailIngredients.Any(ingredient => ingredient.TypeId == targetId))
+            .Select(cocktail => cocktail.Name)
+            .ToListAsync();
     }
 }

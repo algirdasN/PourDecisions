@@ -103,10 +103,17 @@ public partial class SettingsViewModel(IIngredientService ingredientService, IDi
                             ingredientVm.Name = success.NewName;
                             IngredientTypes.MoveInSorted(ingredientVm, ModifyIngredientTypeViewModel.NameComparer);
                             return Result.Success();
-                        case RenameIngredientResult.NameCollision collision:
+                        case RenameIngredientResult.NameCollisionCanMerge collision:
                             newName = collision.NewName;
                             conflictId = collision.ConflictId;
                             return Result.Success();
+                        case RenameIngredientResult.NameCollisionMergeBlocked collision:
+                            return Result.Error(
+                                $"""
+                                 An ingredient type with that name already exists. 
+                                 Merging is blocked because both ingredient types are used in cocktails:
+                                 {string.Join(Environment.NewLine, collision.CocktailNames.Select(c => $" - {c}"))}
+                                 """);
                         default:
                             var errorMessage = result is RenameIngredientResult.Error error
                                 ? error.ErrorMessage
