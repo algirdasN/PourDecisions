@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using PourDecisions.Desktop.Models;
+using PourDecisions.Desktop.Services;
 using PourDecisions.Desktop.ViewModels;
 using Xunit;
 
@@ -12,6 +13,11 @@ namespace PourDecisions.UnitTests.ViewModels;
 public class MainWindowViewModelTests
 {
     private readonly IServiceProvider _serviceProvider = Substitute.For<IServiceProvider>();
+
+    public MainWindowViewModelTests()
+    {
+        _serviceProvider.GetService(typeof(ToastViewModel)).Returns(new ToastViewModel(new ToastService()));
+    }
 
     [Fact]
     public void InitialState_IsCorrect()

@@ -13,7 +13,8 @@ namespace PourDecisions.Desktop.ViewModels;
 public partial class InventoryViewModel(
     IBottleService bottleService,
     IDialogService dialogService,
-    IIngredientService ingredientService)
+    IIngredientService ingredientService,
+    IToastService toastService)
     : ViewModelBase, IAsyncLoadable
 {
     [ObservableProperty]
@@ -80,6 +81,7 @@ public partial class InventoryViewModel(
         try
         {
             var bottle = await bottleService.AddBottleAsync(typeName, bottleName, volume, fillLevel);
+            toastService.ShowSuccess($"Successfully added bottle '{bottleName}' ({typeName}, {volume} ml)");
             var ingredientType = bottle.Type;
 
             var allBottles = await bottleService.GetBottlesOfTypeAsync(ingredientType.Id);
@@ -159,6 +161,7 @@ public partial class InventoryViewModel(
             }
 
             await bottleService.DeleteBottleAsync(bottleId);
+            toastService.ShowWarning($"Successfully deleted bottle '{bottleName}' ({typeName})");
             var bottles = await bottleService.GetBottlesOfTypeAsync(typeId);
             var ingredientViewModel = IngredientTypes.First(type => type.Id == typeId);
 

@@ -58,8 +58,10 @@ public class App : Avalonia.Application
         services.AddScoped<ICocktailService, CocktailService>();
         services.AddScoped<IDialogService, DialogService>();
         services.AddScoped<IIngredientService, IngredientService>();
+        services.AddScoped<IToastService, ToastService>();
 
         services.AddTransient<MainWindowViewModel>();
+        services.AddTransient<ToastViewModel>();
 
         services.AddTransient<CocktailsViewModel>();
         services.AddTransient<EditCocktailsViewModel>();
