@@ -408,7 +408,7 @@ public class SettingsViewModelTests
         await _ingredientService.Received(1).DeleteIngredientTypeAsync(1, true);
         Assert.Single(viewModel.IngredientTypes);
         Assert.Equal("Vodka", viewModel.IngredientTypes[0].Name);
-        _toastService.Received(1).ShowWarning("Successfully deleted ingredient type 'Gin'");
+        _toastService.Received(1).ShowSuccess("Successfully deleted ingredient type 'Gin'");
     }
 
     [Fact]

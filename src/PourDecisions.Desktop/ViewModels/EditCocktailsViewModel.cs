@@ -183,7 +183,7 @@ public partial class EditCocktailsViewModel(
             }
 
             await cocktailService.DeleteCocktailAsync(cocktailId);
-            toastService.ShowWarning($"Successfully deleted cocktail '{cocktailName}'");
+            toastService.ShowSuccess($"Successfully deleted cocktail '{cocktailName}'");
 
             CocktailEditItemViewModel = null;
             CocktailSummaries.Remove(CocktailSummaries.First(cocktail => cocktail.Id == cocktailId));

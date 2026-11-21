@@ -119,11 +119,10 @@ public partial class SettingsViewModel(
                                  Merging is blocked because both ingredient types are used in cocktails:
                                  {string.Join(Environment.NewLine, collision.CocktailNames.Select(c => $" - {c}"))}
                                  """);
+                        case RenameIngredientResult.Error error:
+                            return Result.Error(error.ErrorMessage);
                         default:
-                            var errorMessage = result is RenameIngredientResult.Error error
-                                ? error.ErrorMessage
-                                : "Unknown error occurred.";
-                            return Result.Error(errorMessage);
+                            throw new InvalidOperationException("Unknown result type");
                     }
                 });
 
@@ -132,8 +131,10 @@ public partial class SettingsViewModel(
                 return;
             }
 
+            var targetIngredient = IngredientTypes.First(t => t.Id == conflictId.Value);
+
             var dialogResult = await dialogService.ShowConfirmationDialogAsync("Merge ingredient types",
-                $"An ingredient type with the name '{newName}' already exists. Do you want to merge '{ingredientVm.Name}' into the existing ingredient type?",
+                $"An ingredient type with the name '{targetIngredient.Name}' already exists. Do you want to merge '{ingredientVm.Name}' into the existing ingredient type?",
                 "Merge", "Cancel", FAContentDialogButton.Close);
 
             if (dialogResult == FAContentDialogResult.Primary)
@@ -144,9 +145,8 @@ public partial class SettingsViewModel(
                 {
                     case MergeIngredientResult.Success success:
                         toastService.ShowSuccess(
-                            $"Successfully merged ingredient type '{ingredientVm.Name}' into '{newName}'");
-                        IngredientTypes.FirstOrDefault(type => type.Id == conflictId.Value)?.IsTracked =
-                            success.IsTargetTracked;
+                            $"Successfully merged ingredient type '{ingredientVm.Name}' into '{targetIngredient.Name}'");
+                        targetIngredient.IsTracked = success.IsTargetTracked;
                         IngredientTypes.Remove(ingredientVm);
                         return;
                     case MergeIngredientResult.RecipeConflict conflict:
@@ -156,14 +156,11 @@ public partial class SettingsViewModel(
                              {string.Join(Environment.NewLine, conflict.CocktailNames.Select(c => $" - {c}"))}
                              """);
                         return;
-                    default:
-                        var errorMessage = result is MergeIngredientResult.Error error
-                            ? error.ErrorMessage
-                            : "Unknown error occurred.";
-
-                        await dialogService.ShowInformationDialogAsync("Failed to merge ingredient types",
-                            errorMessage);
+                    case MergeIngredientResult.Error error:
+                        await dialogService.ShowInformationDialogAsync("Failed to merge ingredient types", error.ErrorMessage);
                         return;
+                    default:
+                        throw new InvalidOperationException("Unknown result type");
                 }
             }
         }
@@ -220,7 +217,7 @@ public partial class SettingsViewModel(
 
             IngredientTypes.Remove(IngredientTypes.First(type => type.Id == ingredientVm.Id));
 
-            toastService.ShowWarning($"Successfully deleted ingredient type '{ingredientVm.Name}'");
+            toastService.ShowSuccess($"Successfully deleted ingredient type '{ingredientVm.Name}'");
         }
         catch (Exception e)
         {
