@@ -15,9 +15,13 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private NavigationItem _selectedNavItem;
 
+    [ObservableProperty]
+    private ToastViewModel? _toastViewModel;
+
     public MainWindowViewModel(IServiceProvider? services)
     {
         _services = services;
+        _toastViewModel = services?.GetRequiredService<ToastViewModel>();
 
         NavigationItems =
         [

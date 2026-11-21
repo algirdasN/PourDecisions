@@ -13,6 +13,7 @@ public class InventoryViewModelTests
     private readonly IBottleService _bottleService = Substitute.For<IBottleService>();
     private readonly IDialogService _dialogService = Substitute.For<IDialogService>();
     private readonly IIngredientService _ingredientService = Substitute.For<IIngredientService>();
+    private readonly IToastService _toastService = Substitute.For<IToastService>();
 
     [Fact]
     public async Task LoadAsync_LoadsIngredientTypes_SortedByName()
@@ -26,7 +27,7 @@ public class InventoryViewModelTests
         _bottleService.GetBottlesWithTypeAsync().Returns(new List<Bottle> { bottle1, bottle2 });
         _ingredientService.GetTrackedIngredientTypeNamesAsync().Returns(new List<string> { "Gin", "Bourbon" });
 
-        var viewModel = new InventoryViewModel(_bottleService, _dialogService, _ingredientService);
+        var viewModel = new InventoryViewModel(_bottleService, _dialogService, _ingredientService, _toastService);
 
         // Act
         await viewModel.LoadAsync();
@@ -45,7 +46,7 @@ public class InventoryViewModelTests
         _bottleService.GetBottlesWithTypeAsync().Returns(new List<Bottle>());
         _ingredientService.GetTrackedIngredientTypeNamesAsync().Returns(new List<string>());
 
-        var viewModel = new InventoryViewModel(_bottleService, _dialogService, _ingredientService);
+        var viewModel = new InventoryViewModel(_bottleService, _dialogService, _ingredientService, _toastService);
         await viewModel.LoadAsync();
 
         var newType = new IngredientType { Id = 1, Name = "Gin" };
@@ -70,6 +71,7 @@ public class InventoryViewModelTests
         Assert.Single(viewModel.IngredientTypes);
         Assert.Equal("Gin", viewModel.IngredientTypes[0].Name);
         Assert.Single(viewModel.IngredientTypes[0].Bottles);
+        _toastService.Received(1).ShowSuccess("Successfully added bottle 'Tanqueray' (Gin, 700 ml)");
     }
 
     [Fact]
@@ -86,7 +88,7 @@ public class InventoryViewModelTests
             .Returns(FAContentDialogResult.Primary);
         _bottleService.GetBottlesOfTypeAsync(1).Returns(new List<Bottle>());
 
-        var viewModel = new InventoryViewModel(_bottleService, _dialogService, _ingredientService);
+        var viewModel = new InventoryViewModel(_bottleService, _dialogService, _ingredientService, _toastService);
         await viewModel.LoadAsync();
 
         // Act
@@ -98,6 +100,7 @@ public class InventoryViewModelTests
         // Assert
         Assert.Empty(viewModel.IngredientTypes);
         Assert.True(viewModel.IsEmpty);
+        _toastService.Received(1).ShowWarning("Successfully deleted bottle 'Tanqueray' (Gin)");
     }
 
     [Fact]
@@ -109,7 +112,7 @@ public class InventoryViewModelTests
         _bottleService.GetBottlesWithTypeAsync().Returns(new List<Bottle> { bottle });
         _ingredientService.GetTrackedIngredientTypeNamesAsync().Returns(new List<string> { "Gin" });
 
-        var viewModel = new InventoryViewModel(_bottleService, _dialogService, _ingredientService);
+        var viewModel = new InventoryViewModel(_bottleService, _dialogService, _ingredientService, _toastService);
         await viewModel.LoadAsync();
 
         // Act

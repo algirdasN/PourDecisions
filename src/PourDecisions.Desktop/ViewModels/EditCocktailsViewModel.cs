@@ -11,7 +11,8 @@ namespace PourDecisions.Desktop.ViewModels;
 public partial class EditCocktailsViewModel(
     ICocktailService cocktailService,
     IDialogService dialogService,
-    IIngredientService ingredientService)
+    IIngredientService ingredientService,
+    IToastService toastService)
     : ViewModelBase, IAsyncLoadable
 {
     [ObservableProperty]
@@ -69,6 +70,8 @@ public partial class EditCocktailsViewModel(
             CocktailEditItemViewModel = null;
             CocktailSummaries.InsertIntoSorted(newSummary, CocktailEditSummary.NameComparer);
             SelectedCocktail = newSummary;
+            
+            toastService.ShowSuccess($"Successfully added cocktail '{newSummary.Name}'");
         }
         catch (Exception e)
         {
@@ -90,6 +93,8 @@ public partial class EditCocktailsViewModel(
             CocktailSummaries[CocktailSummaries.IndexOf(oldSummary)] = newSummary;
             CocktailSummaries.MoveInSorted(newSummary, CocktailEditSummary.NameComparer);
             SelectedCocktail = newSummary;
+            
+            toastService.ShowSuccess($"Successfully updated cocktail '{newSummary.Name}'");
         }
         catch (Exception e)
         {
@@ -178,6 +183,7 @@ public partial class EditCocktailsViewModel(
             }
 
             await cocktailService.DeleteCocktailAsync(cocktailId);
+            toastService.ShowWarning($"Successfully deleted cocktail '{cocktailName}'");
 
             CocktailEditItemViewModel = null;
             CocktailSummaries.Remove(CocktailSummaries.First(cocktail => cocktail.Id == cocktailId));
