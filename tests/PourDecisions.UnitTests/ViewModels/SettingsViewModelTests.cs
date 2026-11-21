@@ -254,13 +254,82 @@ public class SettingsViewModelTests
             _toastService.DidNotReceive().ShowSuccess(Arg.Any<string>());
             Assert.Equal(2, viewModel.IngredientTypes.Count);
         }
+
         _toastService.DidNotReceive().ShowWarning(Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task Rename_BlockedCollision_ReturnsValidationErrorWithoutPromptingForMerge()
+    {
+        _ingredientService.GetIngredientTypesAsync()
+            .Returns(new List<IngredientType> { new() { Id = 1, Name = "Gin" } });
+        _ingredientService.RenameIngredientAsync(1, "Vodka")
+            .Returns(new RenameIngredientResult.NameCollisionMergeBlocked(["Martini", "Negroni"]));
+        Result? validation = null;
+        _dialogService.ShowInputDialogAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Func<string, Task<Result>>>())
+            .Returns(async call =>
+            {
+                validation = await call.ArgAt<Func<string, Task<Result>>>(5)("Vodka");
+                return null;
+            });
+        var viewModel = new SettingsViewModel(_ingredientService, _dialogService, _toastService);
+        await viewModel.LoadAsync();
+        var ingredient = viewModel.IngredientTypes[0];
+
+        ingredient.RenameCommand.Execute(null);
+
+        Assert.NotNull(validation);
+        Assert.False(validation.IsSuccess);
+        Assert.Contains("Martini", validation.ErrorMessage);
+        Assert.Contains("Negroni", validation.ErrorMessage);
+        await _dialogService.DidNotReceive().ShowConfirmationDialogAsync(Arg.Any<string>(), Arg.Any<string>(),
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<FAContentDialogButton>());
+        await _ingredientService.DidNotReceive().MergeIngredientTypesAsync(Arg.Any<int>(), Arg.Any<int>());
+        _toastService.DidNotReceive().ShowSuccess(Arg.Any<string>());
+        Assert.Equal("Gin", ingredient.Name);
+        Assert.False(ingredient.IsBusy);
+    }
+
+    [Fact]
+    public async Task Merge_RecipeConflict_ShowsCocktailsAndPreservesIngredients()
+    {
+        _ingredientService.GetIngredientTypesAsync().Returns(new List<IngredientType>
+        {
+            new() { Id = 1, Name = "Gin" },
+            new() { Id = 2, Name = "Vodka" }
+        });
+        _ingredientService.RenameIngredientAsync(1, "Vodka")
+            .Returns(new RenameIngredientResult.NameCollisionCanMerge("Vodka", 2));
+        _ingredientService.MergeIngredientTypesAsync(1, 2)
+            .Returns(new MergeIngredientResult.RecipeConflict(["Martini", "Negroni"]));
+        _dialogService.ShowInputDialogAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Func<string, Task<Result>>>())
+            .Returns(async call =>
+            {
+                await call.ArgAt<Func<string, Task<Result>>>(5)("Vodka");
+                return (string?)"Vodka";
+            });
+        _dialogService.ShowConfirmationDialogAsync("Merge ingredient types", Arg.Any<string>(), "Merge", "Cancel",
+            Arg.Any<FAContentDialogButton>()).Returns(FAContentDialogResult.Primary);
+        var viewModel = new SettingsViewModel(_ingredientService, _dialogService, _toastService);
+        await viewModel.LoadAsync();
+        var ingredient = viewModel.IngredientTypes[0];
+
+        ingredient.RenameCommand.Execute(null);
+
+        await _dialogService.Received(1).ShowInformationDialogAsync("Failed to merge ingredient types",
+            Arg.Is<string>(message => message.Contains("Martini") && message.Contains("Negroni")));
+        Assert.Equal(2, viewModel.IngredientTypes.Count);
+        Assert.False(ingredient.IsBusy);
+        _toastService.DidNotReceive().ShowSuccess(Arg.Any<string>());
     }
 
     [Fact]
     public async Task Rename_Failure_DoesNotShowToast()
     {
-        _ingredientService.GetIngredientTypesAsync().Returns(new List<IngredientType> { new() { Id = 1, Name = "Gin" } });
+        _ingredientService.GetIngredientTypesAsync()
+            .Returns(new List<IngredientType> { new() { Id = 1, Name = "Gin" } });
         _ingredientService.RenameIngredientAsync(1, "Whiskey").Returns(new RenameIngredientResult.Error("Failed"));
         _dialogService.ShowInputDialogAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
                 Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Func<string, Task<Result>>>())
