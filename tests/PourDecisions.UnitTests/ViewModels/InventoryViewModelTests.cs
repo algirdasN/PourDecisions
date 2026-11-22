@@ -100,7 +100,7 @@ public class InventoryViewModelTests
         // Assert
         Assert.Empty(viewModel.IngredientTypes);
         Assert.True(viewModel.IsEmpty);
-        _toastService.Received(1).ShowWarning("Successfully deleted bottle 'Tanqueray' (Gin)");
+        _toastService.Received(1).ShowSuccess("Successfully deleted bottle 'Tanqueray' (Gin)");
     }
 
     [Fact]

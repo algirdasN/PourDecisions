@@ -127,7 +127,7 @@ public class EditCocktailsViewModelTests
         await _cocktailService.Received(1).DeleteCocktailAsync(1);
         Assert.Single(viewModel.CocktailSummaries); // Only <New Cocktail> left
         Assert.Equal("<New Cocktail>", viewModel.CocktailSummaries[0].Name);
-        _toastService.Received(1).ShowWarning("Successfully deleted cocktail 'Martini'");
+        _toastService.Received(1).ShowSuccess("Successfully deleted cocktail 'Martini'");
     }
 
     [Fact]

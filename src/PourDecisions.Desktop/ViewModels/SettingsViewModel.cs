@@ -2,13 +2,17 @@ using System.Collections.ObjectModel;
 using System.Reflection;
 using CommunityToolkit.Mvvm.ComponentModel;
 using FluentAvalonia.UI.Controls;
+using PourDecisions.Application.Models;
 using PourDecisions.Application.Services;
 using PourDecisions.Desktop.Services;
 using PourDecisions.Shared.Extensions;
 
 namespace PourDecisions.Desktop.ViewModels;
 
-public partial class SettingsViewModel(IIngredientService ingredientService, IDialogService dialogService)
+public partial class SettingsViewModel(
+    IIngredientService ingredientService,
+    IDialogService dialogService,
+    IToastService toastService)
     : ViewModelBase, IAsyncLoadable
 {
     [ObservableProperty]
@@ -87,20 +91,78 @@ public partial class SettingsViewModel(IIngredientService ingredientService, IDi
 
         try
         {
+            int? conflictId = null;
+            string? newName = null;
             _ = await dialogService.ShowInputDialogAsync($"Rename ingredient type '{ingredientVm.Name}'",
                 "Enter new name:", "Confirm", "Cancel", ingredientVm.Name,
                 async (value) =>
                 {
                     var result = await ingredientService.RenameIngredientAsync(ingredientVm.Id, value);
 
-                    if (result.IsSuccess)
+                    switch (result)
                     {
-                        ingredientVm.Name = result.Value;
-                        IngredientTypes.MoveInSorted(ingredientVm, ModifyIngredientTypeViewModel.NameComparer);
+                        case RenameIngredientResult.Success success:
+                            toastService.ShowSuccess(
+                                $"Successfully renamed ingredient type '{ingredientVm.Name}' to '{success.NewName}'");
+                            newName = success.NewName;
+                            ingredientVm.Name = success.NewName;
+                            IngredientTypes.MoveInSorted(ingredientVm, ModifyIngredientTypeViewModel.NameComparer);
+                            return Result.Success();
+                        case RenameIngredientResult.NameCollisionCanMerge collision:
+                            newName = collision.NewName;
+                            conflictId = collision.ConflictId;
+                            return Result.Success();
+                        case RenameIngredientResult.NameCollisionMergeBlocked collision:
+                            return Result.Error(
+                                $"""
+                                 An ingredient type with that name already exists. 
+                                 Merging is blocked because both ingredient types are used in cocktails:
+                                 {string.Join(Environment.NewLine, collision.CocktailNames.Select(c => $" - {c}"))}
+                                 """);
+                        case RenameIngredientResult.Error error:
+                            return Result.Error(error.ErrorMessage);
+                        default:
+                            throw new InvalidOperationException("Unknown result type");
                     }
-
-                    return result;
                 });
+
+            if (conflictId is null || newName is null)
+            {
+                return;
+            }
+
+            var targetIngredient = IngredientTypes.First(t => t.Id == conflictId.Value);
+
+            var dialogResult = await dialogService.ShowConfirmationDialogAsync("Merge ingredient types",
+                $"An ingredient type with the name '{targetIngredient.Name}' already exists. Do you want to merge '{ingredientVm.Name}' into the existing ingredient type?",
+                "Merge", "Cancel", FAContentDialogButton.Close);
+
+            if (dialogResult == FAContentDialogResult.Primary)
+            {
+                var result = await ingredientService.MergeIngredientTypesAsync(ingredientVm.Id, conflictId.Value);
+
+                switch (result)
+                {
+                    case MergeIngredientResult.Success success:
+                        toastService.ShowSuccess(
+                            $"Successfully merged ingredient type '{ingredientVm.Name}' into '{targetIngredient.Name}'");
+                        targetIngredient.IsTracked = success.IsTargetTracked;
+                        IngredientTypes.Remove(ingredientVm);
+                        return;
+                    case MergeIngredientResult.RecipeConflict conflict:
+                        await dialogService.ShowInformationDialogAsync("Failed to merge ingredient types",
+                            $"""
+                             Cannot merge ingredient types. Both ingredient types are used in cocktails:
+                             {string.Join(Environment.NewLine, conflict.CocktailNames.Select(c => $" - {c}"))}
+                             """);
+                        return;
+                    case MergeIngredientResult.Error error:
+                        await dialogService.ShowInformationDialogAsync("Failed to merge ingredient types", error.ErrorMessage);
+                        return;
+                    default:
+                        throw new InvalidOperationException("Unknown result type");
+                }
+            }
         }
         catch (Exception e)
         {
@@ -154,6 +216,8 @@ public partial class SettingsViewModel(IIngredientService ingredientService, IDi
             await ingredientService.DeleteIngredientTypeAsync(ingredientVm.Id, true);
 
             IngredientTypes.Remove(IngredientTypes.First(type => type.Id == ingredientVm.Id));
+
+            toastService.ShowSuccess($"Successfully deleted ingredient type '{ingredientVm.Name}'");
         }
         catch (Exception e)
         {

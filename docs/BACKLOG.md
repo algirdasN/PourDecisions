@@ -171,7 +171,7 @@ Detail view is the right panel of the master/detail layout implemented in PD-003
 
 **Notes:**
 - FluentAvalonia's `InfoBar` control is the natural fit — already a dependency
-- Banner state (message + visibility) lives on the page ViewModel, not in `IDialogService` — it is not a blocking dialog
+- Notifications go through `IToastService` rather than page-VM state, so any screen can raise them. Severity reflects the *outcome*, not the action: a completed, intended action is **success**, even a destructive one. **Warning** is reserved for completed actions with an unrequested side effect.
 
 ---
 
@@ -203,7 +203,7 @@ Detail view is the right panel of the master/detail layout implemented in PD-003
 - **Untracking deletes the type's bottles** (after confirmation) instead of blocking. New invariant: *an untracked type never has bottles*. `AddBottleAsync` already upholds the reverse (adding a bottle tracks the type).
 - **Case-insensitive uniqueness is enforced by the database**: `IngredientType.Name` uses `COLLATE NOCASE` (migration `AddIngredientTypeNameNoCaseCollation`), so the unique index rejects "Lime juice" / "Lime Juice". Comparisons in code are plain equality — no `ToLower()` needed.
 - **Business rules live in `IngredientService`, not the ViewModel.** Destructive operations follow a **preview → confirm → execute** flow (`PreviewIngredientTypeModifyAsync`, then `DeleteIngredientTypeAsync` / `UpdateIngredientTypeTrackedAsync` with an explicit `allowWithBottles` acknowledgement). Execute re-checks the rules; the preview is advisory only. See `ARCHITECTURE.md` → *Destructive Operations*.
-- **Rename returns a `Result`**, not an exception, and the rename itself is the validation: the input dialog stays open on failure and shows the service's message (`ShowInputDialogAsync` takes an async submit callback and uses a FluentAvalonia deferral). The service owns normalisation; the ViewModel updates the row from the normalised name it gets back.
+- **Rename uses typed outcomes**, and the rename itself is the validation: the input dialog stays open on failure and shows the service's message (`ShowInputDialogAsync` takes an async submit callback and uses a FluentAvalonia deferral). The service owns normalisation; the ViewModel updates the row from the normalised name it gets back.
 - **Tracked toggle uses `ManualCheckBox`** (a `CheckBox` that never toggles itself). The click raises a command, the parent runs the flow, and `IsTracked` changes only on success — cancel therefore needs no revert. `CheckBox` and `ToggleButton` both flip their own state locally, which overrides a one-way binding.
 - **Row VM re-entry protection via public `IsBusy`**, pushed in by the parent and reset in `finally`. Events never return values; the parent pushes results back into the row.
 - **Destructive confirmations default to Cancel** (`FAContentDialogButton.Close`): cocktail delete, bottle delete, ingredient type delete, untrack.
@@ -213,40 +213,52 @@ Detail view is the right panel of the master/detail layout implemented in PD-003
 **Known limitations (accepted):**
 - The consent flag is a bare bool, not tied to the exact bottle list the user saw — a bottle added between dialog and confirm would be deleted unseen. Acceptable for a single-user desktop app.
 - Tracking a type that has no bottles makes every recipe using it unavailable with no warning (see PD-009c).
-- The `NOCASE` migration rebuilds a unique index; a database that already holds case-duplicate type names will fail to migrate. Check for duplicates before upgrading an existing DB (see PD-009b).
+- The `NOCASE` migration rebuilds a unique index; a database that already holds case-duplicate type names would fail to migrate. Accepted while only the dev database exists. Revisit with a data-fix step before distributing a build.
 
 ---
 
-### PD-009b · Merge Ingredient Types
+### PD-009b · Merge Ingredient Types ✅
 **Priority:** P3 — follow-up to PD-009a
 
-**Goal:** Resolve near-duplicate types (e.g. "Lime juice" / "Lime Juice") and rename collisions by merging instead of blocking.
+**Goal:** Resolve near-duplicate types (typos, naming variants) by merging instead of blocking.
 
 **Acceptance criteria:**
-- Merge type A into type B: repoint `CocktailIngredient` and `Bottle` rows to B, then delete A, atomically
-- Rename that collides with an existing name offers "merge instead" rather than only an error
-- Preview shows how many recipes and bottles are affected
-- Duplicate recipe rows after merge (same cocktail now uses B twice) are handled explicitly
+- Renaming a type to a name that already exists offers to merge it into the existing type
+- Merge repoints `CocktailIngredient` and `Bottle` rows to the target, then deletes the source, in one save
+- If any cocktail uses both types, the merge is blocked and the cocktails are listed
+- Afterwards the source row disappears and the target row reflects its new tracked state
 
-**Notes:**
-- Also the natural place for a data step guarding the `NOCASE` migration against existing case-duplicates
-- Own ticket because its risk profile (bulk repointing) differs from rename/delete; needs service tests against in-memory SQLite
+**Decisions made during implementation:**
+- **Rename collision is the only entry point.** No "Merge into…" button and no target picker. Typing an existing name expresses the intent.
+- **The target's name always survives.** The user never chooses or retypes a name.
+- **Recipe conflicts block the merge.** If a recipe uses both types, merging would create a duplicate-type recipe the editor forbids and cannot re-save. Auto-summing amounts was rejected (units differ, `ToTaste` is meaningless to sum). The block is reported inside the rename dialog while the user is still typing; the same check runs again at execute time as a race guard.
+- **Tracked rule:** the target keeps its flag, except it becomes tracked when bottles of a tracked source move in. This preserves the invariant *an untracked type never has bottles*.
+- **Typed outcomes instead of `Result`.** Rename returns `Success`, `NameCollisionCanMerge`, `NameCollisionMergeBlocked` or `Error`. Merge returns `Success`, `RecipeConflict` or `Error`. Callers must branch on *why* an operation failed.
+- **Dialog handoff:** the rename dialog closes, then a separate merge confirmation opens. Cancel ends the flow.
+- **Atomic single `SaveChanges`.** Bottle FK cascades, so a rollback test and bottles-survive assertions guard the one path that could destroy user data.
+
+**Known limitations (accepted):**
+- The merge confirmation does not yet show recipe/bottle counts, the resulting tracked state or irreversibility (see PD-009c).
+- No undo. A pre-operation database backup is under Raised in Review.
+- No `NOCASE` migration guard: only the dev database exists. Revisit before distributing a build.
 
 ---
 
 ### PD-009c · Settings Polish
-**Priority:** P3 — follow-up to PD-009a
+**Priority:** P3 — follow-up to PD-009a / PD-009b
 
-**Goal:** Make the ingredient type screen useful as a cleanup tool.
+**Goal:** Make the ingredient type screen useful as a cleanup tool and make merge honest about its impact.
 
 **Acceptance criteria:**
 - Per-row bottle count and recipe count (single projection query)
 - Search box and filter chips: All / Tracked / Untracked / Unused (no bottles, no recipes)
-- Success notification after rename / delete / tracked change, using the PD-007a pattern (success is currently silent, failures use blocking dialogs)
+- Merge confirmation shows: recipes affected (count), bottles moving (count), the resulting tracked state, and that the merge cannot be undone
 - Optional: before tracking a type with no bottles, show "this will make N cocktails unavailable"
 
 **Notes:**
-- Counts and the availability preview can reuse the same impact query that backs the preview/execute flow
+- Counts, the merge confirmation and the tracked-type preview all reuse one impact query, shared with the existing preview/execute flow
+- Success toasts for rename, delete, merge and tracked toggle already shipped (PD-009b)
+- Merge execute must keep re-checking its rules (recipe conflict) and not trust the preview
 
 ---
 
@@ -274,3 +286,4 @@ Detail view is the right panel of the master/detail layout implemented in PD-003
 - **Tests and CI** — service tests on in-memory SQLite (`NOCASE`, `Restrict` FK, delete/untrack rules, rename outcomes), unit tests for `MoveInSorted`; CI build running tests and a migrations-up-to-date check.
 - **Edit bottle** — currently delete and re-add.
 - **Tracked-type preview** — see PD-009c.
+- **Backup before bulk-destructive operations** — copying the SQLite file before merge (and similar) is cheap and could double as the backup story for import/export.

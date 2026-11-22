@@ -27,6 +27,42 @@ public class IngredientServiceTests
         return new CocktailDbContext(options);
     }
 
+    private static async Task SeedMergeAsync(SqliteConnection connection, bool conflict = false,
+        bool sourceTracked = true, bool targetTracked = false, bool sourceBottle = true)
+    {
+        await using var context = CreateContext(connection);
+        var source = new IngredientType { Id = 1, Name = "Gin", IsTracked = sourceTracked };
+        var target = new IngredientType { Id = 2, Name = "vOdKa", IsTracked = targetTracked };
+        var other = new IngredientType { Id = 3, Name = "Rum", IsTracked = true };
+        context.IngredientTypes.AddRange(source, target, other);
+        context.Cocktails.AddRange(
+            new Cocktail
+            {
+                Id = 1, Name = "Source cocktail", Instructions = "Stir",
+                CocktailIngredients = new List<CocktailIngredient>
+                {
+                    new() { Id = 1, TypeId = 1, AmountValue = 60, AmountUnit = AmountUnit.Ml, SortOrder = 2 },
+                    new() { Id = 2, TypeId = conflict ? 2 : 3, AmountValue = 20, AmountUnit = AmountUnit.Ml }
+                }
+            },
+            new Cocktail
+            {
+                Id = 2, Name = "Target cocktail", Instructions = "Shake",
+                CocktailIngredients = new List<CocktailIngredient>
+                {
+                    new() { Id = 3, TypeId = 2, AmountValue = 30, AmountUnit = AmountUnit.Ml }
+                }
+            });
+        if (sourceBottle)
+        {
+            context.Bottles.Add(new Bottle
+                { Id = 1, Name = "Source bottle", Volume = 700, Type = source, FillLevel = FillLevel.Full });
+        }
+        context.Bottles.Add(new Bottle
+            { Id = 2, Name = "Other bottle", Volume = 500, Type = other, FillLevel = FillLevel.Full });
+        await context.SaveChangesAsync();
+    }
+
     [Fact]
     public async Task GetIngredientTypesAsync_ReturnsAllTypesInAlphabeticalOrder()
     {
@@ -175,7 +211,7 @@ public class IngredientServiceTests
         }
 
         // Act
-        Result result;
+        RenameIngredientResult result;
         await using (var context = CreateContext(connection))
         {
             var service = new IngredientService(context);
@@ -183,8 +219,8 @@ public class IngredientServiceTests
         }
 
         // Assert
-        Assert.False(result.IsSuccess);
-        Assert.Equal("Ingredient type name must be at least 3 characters long.", result.ErrorMessage);
+        var error = Assert.IsType<RenameIngredientResult.Error>(result);
+        Assert.Equal("Ingredient type name must be at least 3 characters long.", error.ErrorMessage);
     }
 
 
@@ -195,7 +231,7 @@ public class IngredientServiceTests
         await using var connection = CreateOpenConnection();
 
         // Act
-        Result result;
+        RenameIngredientResult result;
         await using (var context = CreateContext(connection))
         {
             var service = new IngredientService(context);
@@ -203,8 +239,8 @@ public class IngredientServiceTests
         }
 
         // Assert
-        Assert.False(result.IsSuccess);
-        Assert.Equal("Ingredient type with ID 999 not found.", result.ErrorMessage);
+        var error = Assert.IsType<RenameIngredientResult.Error>(result);
+        Assert.Equal("Ingredient type with ID 999 not found.", error.ErrorMessage);
     }
 
     [Fact]
@@ -222,7 +258,7 @@ public class IngredientServiceTests
         }
 
         // Act
-        Result result;
+        RenameIngredientResult result;
         await using (var context = CreateContext(connection))
         {
             var service = new IngredientService(context);
@@ -230,8 +266,8 @@ public class IngredientServiceTests
         }
 
         // Assert
-        Assert.False(result.IsSuccess);
-        Assert.Equal("Enter a new ingredient type name.", result.ErrorMessage);
+        var error = Assert.IsType<RenameIngredientResult.Error>(result);
+        Assert.Equal("Enter a new ingredient type name.", error.ErrorMessage);
     }
 
     [Fact]
@@ -250,7 +286,7 @@ public class IngredientServiceTests
         }
 
         // Act
-        Result result;
+        RenameIngredientResult result;
         await using (var context = CreateContext(connection))
         {
             var service = new IngredientService(context);
@@ -258,8 +294,9 @@ public class IngredientServiceTests
         }
 
         // Assert
-        Assert.False(result.IsSuccess);
-        Assert.Equal("Ingredient type 'Vodka' already exists.", result.ErrorMessage);
+        var collision = Assert.IsType<RenameIngredientResult.NameCollisionCanMerge>(result);
+        Assert.Equal("Vodka", collision.NewName);
+        Assert.Equal(2, collision.ConflictId);
     }
 
     [Fact]
@@ -277,7 +314,7 @@ public class IngredientServiceTests
         }
 
         // Act
-        Result<string> result;
+        RenameIngredientResult result;
         await using (var context = CreateContext(connection))
         {
             var service = new IngredientService(context);
@@ -287,12 +324,165 @@ public class IngredientServiceTests
         // Assert
         await using (var context = CreateContext(connection))
         {
-            Assert.True(result.IsSuccess);
-            Assert.Equal("London Dry Gin", result.Value);
+            var success = Assert.IsType<RenameIngredientResult.Success>(result);
+            Assert.Equal("London Dry Gin", success.NewName);
 
             var updated = await context.IngredientTypes.FindAsync(1);
             Assert.NotNull(updated);
             Assert.Equal("London Dry Gin", updated.Name);
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RenameIngredientAsync_CollisionReportsMergePossibilityWithoutPersistingChanges(bool conflict)
+    {
+        await using var connection = CreateOpenConnection();
+        await SeedMergeAsync(connection, conflict);
+
+        await using (var context = CreateContext(connection))
+        {
+            var result = await new IngredientService(context).RenameIngredientAsync(1, "  VODKA  ");
+            if (conflict)
+            {
+                var blocked = Assert.IsType<RenameIngredientResult.NameCollisionMergeBlocked>(result);
+                Assert.Equal(new[] { "Source cocktail" }, blocked.CocktailNames);
+            }
+            else
+            {
+                var collision = Assert.IsType<RenameIngredientResult.NameCollisionCanMerge>(result);
+                Assert.Equal("Vodka", collision.NewName);
+                Assert.Equal(2, collision.ConflictId);
+            }
+        }
+
+        await using (var context = CreateContext(connection))
+        {
+            Assert.Equal("Gin", (await context.IngredientTypes.FindAsync(1))!.Name);
+            Assert.Equal("vOdKa", (await context.IngredientTypes.FindAsync(2))!.Name);
+            Assert.Equal(1, (await context.Bottles.FindAsync(1))!.TypeId);
+            Assert.Equal(1, (await context.CocktailIngredients.FindAsync(1))!.TypeId);
+        }
+    }
+
+    [Theory]
+    [InlineData(1, 1, "Cannot merge an ingredient type into itself.")]
+    [InlineData(1, 999, "One or both ingredient types not found.")]
+    [InlineData(999, 2, "One or both ingredient types not found.")]
+    [InlineData(998, 999, "One or both ingredient types not found.")]
+    public async Task MergeIngredientTypesAsync_InvalidIds_ReturnsErrorWithoutChanges(int sourceId, int targetId,
+        string message)
+    {
+        await using var connection = CreateOpenConnection();
+        await SeedMergeAsync(connection);
+
+        await using (var context = CreateContext(connection))
+        {
+            var result = await new IngredientService(context).MergeIngredientTypesAsync(sourceId, targetId);
+            Assert.Equal(message, Assert.IsType<MergeIngredientResult.Error>(result).ErrorMessage);
+        }
+
+        await using (var context = CreateContext(connection))
+        {
+            Assert.Equal(3, await context.IngredientTypes.CountAsync());
+            Assert.Equal(1, (await context.Bottles.FindAsync(1))!.TypeId);
+            Assert.Equal(1, (await context.CocktailIngredients.FindAsync(1))!.TypeId);
+            Assert.False((await context.IngredientTypes.FindAsync(2))!.IsTracked);
+        }
+    }
+
+    [Fact]
+    public async Task MergeIngredientTypesAsync_RecipeConflict_DoesNotChangePersistedData()
+    {
+        await using var connection = CreateOpenConnection();
+        await SeedMergeAsync(connection, conflict: true);
+
+        await using (var context = CreateContext(connection))
+        {
+            var result = await new IngredientService(context).MergeIngredientTypesAsync(1, 2);
+            Assert.Equal(new[] { "Source cocktail" }, Assert.IsType<MergeIngredientResult.RecipeConflict>(result).CocktailNames);
+        }
+
+        await using (var context = CreateContext(connection))
+        {
+            Assert.Equal(3, await context.IngredientTypes.CountAsync());
+            Assert.False((await context.IngredientTypes.FindAsync(2))!.IsTracked);
+            Assert.Equal(1, (await context.Bottles.FindAsync(1))!.TypeId);
+            Assert.Equal(1, (await context.CocktailIngredients.FindAsync(1))!.TypeId);
+            Assert.Equal(2, (await context.CocktailIngredients.FindAsync(2))!.TypeId);
+        }
+    }
+
+    [Fact]
+    public async Task MergeIngredientTypesAsync_SaveFailure_RollsBackAllChanges()
+    {
+        await using var connection = CreateOpenConnection();
+        await SeedMergeAsync(connection);
+        await using (var context = CreateContext(connection))
+        {
+            await context.Database.ExecuteSqlRawAsync(
+                "CREATE TRIGGER RejectIngredientDelete BEFORE DELETE ON IngredientTypes BEGIN SELECT RAISE(ABORT, 'delete rejected'); END;");
+        }
+
+        await using (var context = CreateContext(connection))
+        {
+            var service = new IngredientService(context);
+            await Assert.ThrowsAsync<DbUpdateException>(() => service.MergeIngredientTypesAsync(1, 2));
+        }
+
+        await using (var context = CreateContext(connection))
+        {
+            Assert.NotNull(await context.IngredientTypes.FindAsync(1));
+            Assert.False((await context.IngredientTypes.FindAsync(2))!.IsTracked);
+            Assert.Equal(1, (await context.Bottles.FindAsync(1))!.TypeId);
+            Assert.Equal(1, (await context.CocktailIngredients.FindAsync(1))!.TypeId);
+        }
+    }
+
+    [Theory]
+    [InlineData(true, false, true, true)]
+    [InlineData(true, false, false, false)]
+    [InlineData(false, false, true, false)]
+    [InlineData(false, true, false, true)]
+    public async Task MergeIngredientTypesAsync_ValidMerge_PersistsReferencesAndTrackedStatus(
+        bool sourceTracked, bool targetTracked, bool sourceBottle, bool expectedTracked)
+    {
+        await using var connection = CreateOpenConnection();
+        await SeedMergeAsync(connection, sourceTracked: sourceTracked, targetTracked: targetTracked,
+            sourceBottle: sourceBottle);
+
+        await using (var context = CreateContext(connection))
+        {
+            var result = await new IngredientService(context).MergeIngredientTypesAsync(1, 2);
+            Assert.Equal(expectedTracked, Assert.IsType<MergeIngredientResult.Success>(result).IsTargetTracked);
+        }
+
+        await using (var context = CreateContext(connection))
+        {
+            Assert.Null(await context.IngredientTypes.FindAsync(1));
+            var target = await context.IngredientTypes.FindAsync(2);
+            Assert.NotNull(target);
+            Assert.Equal("vOdKa", target.Name);
+            Assert.Equal(expectedTracked, target.IsTracked);
+            Assert.NotNull(await context.IngredientTypes.FindAsync(3));
+            var ingredient = await context.CocktailIngredients.FindAsync(1);
+            Assert.NotNull(ingredient);
+            Assert.Equal(2, ingredient.TypeId);
+            Assert.Equal(60, ingredient.AmountValue);
+            Assert.Equal(AmountUnit.Ml, ingredient.AmountUnit);
+            Assert.Equal(2, ingredient.SortOrder);
+            Assert.Equal(3, (await context.CocktailIngredients.FindAsync(2))!.TypeId);
+            Assert.Equal(2, (await context.CocktailIngredients.FindAsync(3))!.TypeId);
+            if (sourceBottle)
+            {
+                var bottle = await context.Bottles.FindAsync(1);
+                Assert.NotNull(bottle);
+                Assert.Equal(2, bottle.TypeId);
+                Assert.Equal("Source bottle", bottle.Name);
+                Assert.Equal(700, bottle.Volume);
+            }
+            Assert.Equal(3, (await context.Bottles.FindAsync(2))!.TypeId);
         }
     }
 

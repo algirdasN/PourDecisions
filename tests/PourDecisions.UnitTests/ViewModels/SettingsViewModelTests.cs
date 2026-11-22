@@ -13,6 +13,7 @@ public class SettingsViewModelTests
 {
     private readonly IDialogService _dialogService = Substitute.For<IDialogService>();
     private readonly IIngredientService _ingredientService = Substitute.For<IIngredientService>();
+    private readonly IToastService _toastService = Substitute.For<IToastService>();
 
     [Fact]
     public async Task LoadAsync_PopulatesIngredientTypes()
@@ -25,7 +26,7 @@ public class SettingsViewModelTests
         };
         _ingredientService.GetIngredientTypesAsync().Returns(types);
 
-        var viewModel = new SettingsViewModel(_ingredientService, _dialogService);
+        var viewModel = new SettingsViewModel(_ingredientService, _dialogService, _toastService);
 
         // Act
         await viewModel.LoadAsync();
@@ -48,7 +49,7 @@ public class SettingsViewModelTests
         };
         _ingredientService.GetIngredientTypesAsync().Returns(types);
 
-        var viewModel = new SettingsViewModel(_ingredientService, _dialogService);
+        var viewModel = new SettingsViewModel(_ingredientService, _dialogService, _toastService);
         await viewModel.LoadAsync();
 
         // Act
@@ -75,7 +76,7 @@ public class SettingsViewModelTests
             BottleInfoList = []
         });
 
-        var viewModel = new SettingsViewModel(_ingredientService, _dialogService);
+        var viewModel = new SettingsViewModel(_ingredientService, _dialogService, _toastService);
         await viewModel.LoadAsync();
 
         // Act
@@ -104,7 +105,7 @@ public class SettingsViewModelTests
         _dialogService.ShowConfirmationDialogAsync(Arg.Any<string>(), Arg.Any<string>(), "Confirm", "Cancel",
             Arg.Any<FAContentDialogButton>()).Returns(FAContentDialogResult.Primary);
 
-        var viewModel = new SettingsViewModel(_ingredientService, _dialogService);
+        var viewModel = new SettingsViewModel(_ingredientService, _dialogService, _toastService);
         await viewModel.LoadAsync();
 
         // Act
@@ -133,7 +134,7 @@ public class SettingsViewModelTests
         _dialogService.ShowConfirmationDialogAsync(Arg.Any<string>(), Arg.Any<string>(), "Confirm", "Cancel",
             Arg.Any<FAContentDialogButton>()).Returns(FAContentDialogResult.Secondary);
 
-        var viewModel = new SettingsViewModel(_ingredientService, _dialogService);
+        var viewModel = new SettingsViewModel(_ingredientService, _dialogService, _toastService);
         await viewModel.LoadAsync();
 
         // Act
@@ -158,7 +159,7 @@ public class SettingsViewModelTests
         _ingredientService.UpdateIngredientTypeTrackedAsync(1, true, true)
             .ThrowsAsync(new InvalidOperationException("DB error"));
 
-        var viewModel = new SettingsViewModel(_ingredientService, _dialogService);
+        var viewModel = new SettingsViewModel(_ingredientService, _dialogService, _toastService);
         await viewModel.LoadAsync();
 
         // Act
@@ -180,7 +181,7 @@ public class SettingsViewModelTests
             new() { Id = 2, Name = "Vodka", IsTracked = true }
         };
         _ingredientService.GetIngredientTypesAsync().Returns(types);
-        _ingredientService.RenameIngredientAsync(1, "Whiskey").Returns(Result<string>.Success("Whiskey"));
+        _ingredientService.RenameIngredientAsync(1, "Whiskey").Returns(new RenameIngredientResult.Success("Whiskey"));
 
         _dialogService.ShowInputDialogAsync(
                 Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
@@ -196,7 +197,7 @@ public class SettingsViewModelTests
                 return (string?)"Whiskey";
             });
 
-        var viewModel = new SettingsViewModel(_ingredientService, _dialogService);
+        var viewModel = new SettingsViewModel(_ingredientService, _dialogService, _toastService);
         await viewModel.LoadAsync();
 
         // Act
@@ -207,6 +208,144 @@ public class SettingsViewModelTests
         Assert.Equal("Whiskey", viewModel.IngredientTypes[1].Name);
         Assert.Equal("Vodka", viewModel.IngredientTypes[0].Name);
         Assert.False(viewModel.IngredientTypes[1].IsBusy);
+        _toastService.Received(1).ShowSuccess("Successfully renamed ingredient type 'Gin' to 'Whiskey'");
+    }
+
+    [Theory]
+    [InlineData("success")]
+    [InlineData("cancel")]
+    [InlineData("failure")]
+    public async Task Merge_ShowsToastOnlyOnSuccess(string outcome)
+    {
+        _ingredientService.GetIngredientTypesAsync().Returns(new List<IngredientType>
+        {
+            new() { Id = 1, Name = "Gin" },
+            new() { Id = 2, Name = "Vodka" }
+        });
+        _ingredientService.RenameIngredientAsync(1, "Vodka")
+            .Returns(new RenameIngredientResult.NameCollisionCanMerge("Vodka", 2));
+        _ingredientService.MergeIngredientTypesAsync(1, 2).Returns(outcome == "failure"
+            ? new MergeIngredientResult.Error("Merge failed")
+            : new MergeIngredientResult.Success(true));
+        _dialogService.ShowInputDialogAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Func<string, Task<Result>>>())
+            .Returns(async call =>
+            {
+                await call.ArgAt<Func<string, Task<Result>>>(5)("Vodka");
+                return (string?)"Vodka";
+            });
+        _dialogService.ShowConfirmationDialogAsync("Merge ingredient types", Arg.Any<string>(), "Merge", "Cancel",
+                Arg.Any<FAContentDialogButton>())
+            .Returns(outcome == "cancel" ? FAContentDialogResult.Secondary : FAContentDialogResult.Primary);
+        var viewModel = new SettingsViewModel(_ingredientService, _dialogService, _toastService);
+        await viewModel.LoadAsync();
+
+        viewModel.IngredientTypes[0].RenameCommand.Execute(null);
+        await Task.Delay(50);
+
+        if (outcome == "success")
+        {
+            _toastService.Received(1).ShowSuccess("Successfully merged ingredient type 'Gin' into 'Vodka'");
+            Assert.Single(viewModel.IngredientTypes);
+            Assert.True(viewModel.IngredientTypes[0].IsTracked);
+        }
+        else
+        {
+            _toastService.DidNotReceive().ShowSuccess(Arg.Any<string>());
+            Assert.Equal(2, viewModel.IngredientTypes.Count);
+        }
+
+        _toastService.DidNotReceive().ShowWarning(Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task Rename_BlockedCollision_ReturnsValidationErrorWithoutPromptingForMerge()
+    {
+        _ingredientService.GetIngredientTypesAsync()
+            .Returns(new List<IngredientType> { new() { Id = 1, Name = "Gin" } });
+        _ingredientService.RenameIngredientAsync(1, "Vodka")
+            .Returns(new RenameIngredientResult.NameCollisionMergeBlocked(["Martini", "Negroni"]));
+        Result? validation = null;
+        _dialogService.ShowInputDialogAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Func<string, Task<Result>>>())
+            .Returns(async call =>
+            {
+                validation = await call.ArgAt<Func<string, Task<Result>>>(5)("Vodka");
+                return null;
+            });
+        var viewModel = new SettingsViewModel(_ingredientService, _dialogService, _toastService);
+        await viewModel.LoadAsync();
+        var ingredient = viewModel.IngredientTypes[0];
+
+        ingredient.RenameCommand.Execute(null);
+
+        Assert.NotNull(validation);
+        Assert.False(validation.IsSuccess);
+        Assert.Contains("Martini", validation.ErrorMessage);
+        Assert.Contains("Negroni", validation.ErrorMessage);
+        await _dialogService.DidNotReceive().ShowConfirmationDialogAsync(Arg.Any<string>(), Arg.Any<string>(),
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<FAContentDialogButton>());
+        await _ingredientService.DidNotReceive().MergeIngredientTypesAsync(Arg.Any<int>(), Arg.Any<int>());
+        _toastService.DidNotReceive().ShowSuccess(Arg.Any<string>());
+        Assert.Equal("Gin", ingredient.Name);
+        Assert.False(ingredient.IsBusy);
+    }
+
+    [Fact]
+    public async Task Merge_RecipeConflict_ShowsCocktailsAndPreservesIngredients()
+    {
+        _ingredientService.GetIngredientTypesAsync().Returns(new List<IngredientType>
+        {
+            new() { Id = 1, Name = "Gin" },
+            new() { Id = 2, Name = "Vodka" }
+        });
+        _ingredientService.RenameIngredientAsync(1, "Vodka")
+            .Returns(new RenameIngredientResult.NameCollisionCanMerge("Vodka", 2));
+        _ingredientService.MergeIngredientTypesAsync(1, 2)
+            .Returns(new MergeIngredientResult.RecipeConflict(["Martini", "Negroni"]));
+        _dialogService.ShowInputDialogAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Func<string, Task<Result>>>())
+            .Returns(async call =>
+            {
+                await call.ArgAt<Func<string, Task<Result>>>(5)("Vodka");
+                return (string?)"Vodka";
+            });
+        _dialogService.ShowConfirmationDialogAsync("Merge ingredient types", Arg.Any<string>(), "Merge", "Cancel",
+            Arg.Any<FAContentDialogButton>()).Returns(FAContentDialogResult.Primary);
+        var viewModel = new SettingsViewModel(_ingredientService, _dialogService, _toastService);
+        await viewModel.LoadAsync();
+        var ingredient = viewModel.IngredientTypes[0];
+
+        ingredient.RenameCommand.Execute(null);
+
+        await _dialogService.Received(1).ShowInformationDialogAsync("Failed to merge ingredient types",
+            Arg.Is<string>(message => message.Contains("Martini") && message.Contains("Negroni")));
+        Assert.Equal(2, viewModel.IngredientTypes.Count);
+        Assert.False(ingredient.IsBusy);
+        _toastService.DidNotReceive().ShowSuccess(Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task Rename_Failure_DoesNotShowToast()
+    {
+        _ingredientService.GetIngredientTypesAsync()
+            .Returns(new List<IngredientType> { new() { Id = 1, Name = "Gin" } });
+        _ingredientService.RenameIngredientAsync(1, "Whiskey").Returns(new RenameIngredientResult.Error("Failed"));
+        _dialogService.ShowInputDialogAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Func<string, Task<Result>>>())
+            .Returns(async call =>
+            {
+                await call.ArgAt<Func<string, Task<Result>>>(5)("Whiskey");
+                return null;
+            });
+        var viewModel = new SettingsViewModel(_ingredientService, _dialogService, _toastService);
+        await viewModel.LoadAsync();
+
+        viewModel.IngredientTypes[0].RenameCommand.Execute(null);
+        await Task.Delay(50);
+
+        _toastService.DidNotReceive().ShowSuccess(Arg.Any<string>());
+        Assert.Equal("Gin", viewModel.IngredientTypes[0].Name);
     }
 
     [Fact]
@@ -224,7 +363,7 @@ public class SettingsViewModelTests
             BottleInfoList = []
         });
 
-        var viewModel = new SettingsViewModel(_ingredientService, _dialogService);
+        var viewModel = new SettingsViewModel(_ingredientService, _dialogService, _toastService);
         await viewModel.LoadAsync();
 
         // Act
@@ -237,6 +376,7 @@ public class SettingsViewModelTests
             Arg.Is<string>(msg => msg.Contains("Martini")));
         await _ingredientService.DidNotReceive().DeleteIngredientTypeAsync(Arg.Any<int>(), Arg.Any<bool>());
         Assert.Single(viewModel.IngredientTypes);
+        _toastService.DidNotReceive().ShowWarning(Arg.Any<string>());
     }
 
     [Fact]
@@ -257,7 +397,7 @@ public class SettingsViewModelTests
         _dialogService.ShowConfirmationDialogAsync("Delete ingredient type", Arg.Any<string>(), "Delete", "Cancel",
             Arg.Any<FAContentDialogButton>()).Returns(FAContentDialogResult.Primary);
 
-        var viewModel = new SettingsViewModel(_ingredientService, _dialogService);
+        var viewModel = new SettingsViewModel(_ingredientService, _dialogService, _toastService);
         await viewModel.LoadAsync();
 
         // Act
@@ -268,6 +408,7 @@ public class SettingsViewModelTests
         await _ingredientService.Received(1).DeleteIngredientTypeAsync(1, true);
         Assert.Single(viewModel.IngredientTypes);
         Assert.Equal("Vodka", viewModel.IngredientTypes[0].Name);
+        _toastService.Received(1).ShowSuccess("Successfully deleted ingredient type 'Gin'");
     }
 
     [Fact]
@@ -287,7 +428,7 @@ public class SettingsViewModelTests
         _dialogService.ShowConfirmationDialogAsync("Delete ingredient type", Arg.Any<string>(), "Delete", "Cancel",
             Arg.Any<FAContentDialogButton>()).Returns(FAContentDialogResult.Secondary);
 
-        var viewModel = new SettingsViewModel(_ingredientService, _dialogService);
+        var viewModel = new SettingsViewModel(_ingredientService, _dialogService, _toastService);
         await viewModel.LoadAsync();
 
         // Act
@@ -297,5 +438,6 @@ public class SettingsViewModelTests
         // Assert
         await _ingredientService.DidNotReceive().DeleteIngredientTypeAsync(Arg.Any<int>(), Arg.Any<bool>());
         Assert.Single(viewModel.IngredientTypes);
+        _toastService.DidNotReceive().ShowWarning(Arg.Any<string>());
     }
 }

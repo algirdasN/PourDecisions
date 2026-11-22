@@ -161,7 +161,7 @@ public partial class InventoryViewModel(
             }
 
             await bottleService.DeleteBottleAsync(bottleId);
-            toastService.ShowWarning($"Successfully deleted bottle '{bottleName}' ({typeName})");
+            toastService.ShowSuccess($"Successfully deleted bottle '{bottleName}' ({typeName})");
             var bottles = await bottleService.GetBottlesOfTypeAsync(typeId);
             var ingredientViewModel = IngredientTypes.First(type => type.Id == typeId);
 
