@@ -95,6 +95,7 @@ CocktailIngredient  (join table)
 - **Tracking lives on `IngredientType`.** `IsTracked` defaults to `true` for any type created via the bottle add flow. Types created via the cocktail recipe editor are not automatically tracked — the assumption is perishables and garnishes added to recipes don't need inventory tracking until the user explicitly adds a bottle.
 - **Adding a bottle marks its type as tracked.** If an existing untracked type gains a bottle, `IsTracked` is set to `true` by `BottleService.AddBottleAsync`. Deleting all bottles of a type does **not** revert it to untracked — it stays tracked and will appear as missing in the cocktail browser until a new bottle is added.
 - **Untracking a type deletes its bottles.** Setting `IsTracked = false` on a type that has bottles removes them (after a confirmation that lists them). Invariant: *an untracked type never has bottles.* Bottles of an untracked type would be invisible in My Bar (which lists tracked types only), so keeping them would be confusing.
+- **Merging types.** Triggered only by a rename that collides with an existing name; the existing (target) type's name always survives. Blocked when any cocktail uses both types. The target becomes tracked only if tracked bottles move into it, preserving *an untracked type never has bottles*. Repointing and deleting the source happen in a single `SaveChanges`; the bottle FK cascades, so a missed repoint would silently delete bottles. Tests guard this.
 - **A type used by any recipe cannot be deleted.** Enforced in `IngredientService` and by the schema: the `CocktailIngredient → IngredientType` FK is `Restrict`, not `Cascade`. A type with bottles but no recipes can be deleted (bottles cascade) after confirmation.
 - **Type names are unique case-insensitively, enforced by the database.** `IngredientType.Name` has `COLLATE NOCASE` with a unique index. Code compares names with plain equality; do not wrap comparisons in `ToLower()`. NOCASE folds ASCII case only, which is sufficient for this domain.
 - **`FillLevel` has three values: `Full`, `Half`, `Quarter`.** `ThreeQuarters` and `AlmostEmpty` were removed — they added precision without practical benefit for casual cocktail estimation.
@@ -163,10 +164,13 @@ All services are registered as `Scoped` to match the `DbContext` lifetime. Alway
 - `GetIngredientTypeNamesAsync()` — all type names ordered alphabetically. Used for autocomplete in the cocktail ingredient row form.
 - `GetTrackedIngredientTypeNamesAsync()` — tracked type names only, ordered alphabetically. Used for autocomplete in the add bottle form.
 - `GetIngredientTypesAsync()` — all types ordered by name. Used by the Settings screen.
-- `RenameIngredientAsync(int id, string newName)` — returns a `Result`. Owns validation (minimum length, not unchanged, not taken, not found) and normalisation (title case, trimmed); the ViewModel does not repeat these rules.
+- `RenameIngredientAsync(int id, string newName)` — returns `RenameIngredientResult`: `Success(NewName)`, `NameCollisionCanMerge(ExistingName, ConflictId)`, `NameCollisionMergeBlocked(CocktailNames)`, or `Error(ErrorMessage)`. Owns validation and normalisation. A collision also runs the merge-conflict check, so a blocked merge is reported at rename time.
+- `MergeIngredientTypesAsync(int sourceId, int targetId)` — returns `MergeIngredientResult`: `Success(IsTargetTracked)`, `RecipeConflict(CocktailNames)`, or `Error`. Repoints bottles and recipe ingredients (preserving amount, unit and `SortOrder`), applies the tracked rule, deletes the source, all in one save. Re-checks every rule; never trusts an earlier rename result.
 - `PreviewIngredientTypeModifyAsync(int id)` — read-only. Returns `IngredientTypeModifyImpact`: the cocktails using the type (these block deletion) and the bottles that would be removed (these require consent).
 - `UpdateIngredientTypeTrackedAsync(int id, bool newValue, bool allowWithBottles)` — untracking with bottles requires `allowWithBottles`; bottles are then deleted in the same save.
 - `DeleteIngredientTypeAsync(int id, bool allowWithBottles)` — blocked when recipes use the type; requires `allowWithBottles` when bottles exist.
+
+Rename and merge share the private `CocktailsBlockingMergeAsync` query.
 
 ### Destructive Operations (preview → confirm → execute)
 
@@ -178,11 +182,15 @@ Operations with consequences the user must consent to (delete type, untrack type
 
 Preview and execute must share one private impact calculation so they cannot drift apart. Execute must never assume the preview was called. Known, accepted limitation: the acknowledgement is a bool, not bound to the exact list the user saw.
 
-Operations with no consent step (rename) skip the preview and return a result directly. Don't use the pattern for operations without consequences.
+Operations with no consent step (a rename without collision) skip the preview and return a result directly. Don't use the pattern for operations without consequences.
+
+**Merge deviates deliberately.** There is no separate preview call. The only blocking rule (recipe conflict) is surfaced during rename, the confirmation is static text, and execute re-checks. Impact counts and the resulting tracked state are deferred to PD-009c, which adds a shared impact query.
 
 ### Result Types
 
 `PourDecisions.Application/Models/` holds `Result` and `Result<T>` (success flag set explicitly in constructors; `ErrorMessage` on failure; `Value` on success for `Result<T>`). Use them for **expected, user-correctable outcomes** (name taken, too short, not found). Reserve exceptions for real failures (I/O, database). ViewModels still wrap whole flows in `try/catch` for those.
+
+**Outcome records.** When the caller must branch on *why* an operation failed or took a different path (rename collision → offer merge), return a sealed record hierarchy (`RenameIngredientResult`, `MergeIngredientResult`) instead of `Result` plus a message string. Name cases for what they mean (`RecipeConflict`, not `Collision`). C# cannot check exhaustiveness on these, so the switch's default branch should throw as an unhandled-outcome bug, never show a made-up error to the user.
 
 ### Shared Utilities
 
@@ -246,7 +254,7 @@ public interface IAsyncLoadable
 
 **`IngredientFilterViewModel`** — Pure display wrapper for the cocktail browser's ingredient type filter (PD-010). Carries `Id`, `Name`, and a bindable `IsSelected` bool; fires a parameterless `SelectionChanged` event on change. No infrastructure dependencies. Each row owns its own selection state rather than relying on Avalonia's `ListBox.SelectedItems`, which is not directly bindable — this is the same direct-event child-VM pattern used throughout the app rather than a new one.
 
-**`SettingsViewModel`** — Implements `IAsyncLoadable`. Depends only on `IIngredientService` and `IDialogService`; holds no cached bottle/cocktail lists (data is fetched at the moment it is needed via the preview, so it is always fresh). Owns three flows per row — toggle tracked, rename, delete — each wrapped in one `try/catch/finally` that sets and clears the row's `IsBusy`, covering the preview call as well as the final service call. Maps service outcomes to UI only; rules live in the service.
+**`SettingsViewModel`** — Implements `IAsyncLoadable`. Depends on `IIngredientService`, `IDialogService` and `IToastService`; holds no cached bottle/cocktail lists (data is fetched at the moment it is needed via the preview, so it is always fresh). Owns three flows per row — toggle tracked, rename, delete — each wrapped in one `try/catch/finally` that sets and clears the row's `IsBusy`, covering the preview call as well as the final service call. Maps service outcomes to UI only; rules live in the service. Owns the merge flow: rename collision → close input dialog → merge confirmation (defaults to Cancel) → execute → apply the Success result to the rows (remove source, set target's tracked state from the result, never recompute the rule).
 
 **`ModifyIngredientTypeViewModel`** — Settings row. Exposes `Name`, `IsTracked`, `IsBusy` and raises plain events upward (`TrackedToggleRequested`, `RenameButtonClicked`, `DeleteButtonClicked`). Events never return values: the parent runs the async flow and **pushes the result back** by setting `IsTracked`/`Name`. `IsBusy` is state pushed in by the parent (disables the action cell and guards the commands against re-entry); it is reset in `finally` so an exception cannot leave a row disabled.
 
@@ -275,7 +283,7 @@ Form ViewModels (e.g. `AddBottleViewModel`) follow a self-contained pattern:
 
 ### `IDialogService` / `DialogService`
 
-Lives in `PourDecisions.Desktop/Services/`. Registered as `Singleton` — stateless UI service.
+Lives in `PourDecisions.Desktop/Services/`. Registered as `Scoped`.
 
 - `ShowConfirmationDialogAsync(...)` — two-button dialog; returns `Primary` or `Secondary`.
 - `ShowChoiceDialogAsync(...)` — three-button dialog; returns `Primary`, `Secondary`, or `None` (cancel).
@@ -283,6 +291,12 @@ Lives in `PourDecisions.Desktop/Services/`. Registered as `Singleton` — statel
 - `ShowInputDialogAsync(title, message, primaryButtonText, closeButtonText, initialValue, Func<string, Task<Result>>? inputCommand)` — text input dialog. On confirm it awaits `inputCommand` inside a FluentAvalonia deferral: a failed `Result` keeps the dialog open and shows its message; success closes it and the entered text is returned (null if cancelled). The dialog is generic — it does not know it is renaming. The view is created directly by the service; there is no `DataTemplate` for it.
 
 `ShowConfirmationDialogAsync` takes a `defaultButton` (default `Primary`). **Destructive confirmations must pass `FAContentDialogButton.Close`** so Enter cancels rather than deletes.
+
+### `IToastService`
+
+Lives in `PourDecisions.Desktop/Services/`. Transient, non-blocking notifications (`ShowSuccess`, `ShowWarning`) used instead of blocking dialogs for outcomes. Not a dialog, so it is separate from `IDialogService`. Registered as `Scoped`.
+
+**Severity reflects the outcome, not the action.** A completed, intended action is success, even a destructive one (the user already confirmed in a dialog that defaults to Cancel). Warning is for completed actions with an unrequested side effect. Messages state the fact ("Deleted 'Gin'"), without filler such as "Successfully".
 
 ### Value Converters
 
@@ -348,7 +362,8 @@ Configured in `App.axaml.cs` → `OnFrameworkInitializationCompleted()`.
 
 - `DbContext` — `AddDbContext<>` (scoped)
 - `IAvailabilityService`, `ICocktailService`, `IBottleService`, `IIngredientService` — all `Scoped` to match `DbContext` lifetime; avoids captured-dependency bugs that would occur with `Singleton`
-- `IDialogService` — `Singleton` (stateless UI service)
+- `IDialogService` — `Scoped`
+- `IToastService` — `Scoped` (publishes toast requests to subscribers)
 - ViewModels — `Transient` (new instance per navigation).
 - **One `DbContext` per scope is not safe for concurrent queries.** Await service calls sequentially. If concurrency or long-lived scopes become necessary, move to `IDbContextFactory<CocktailDbContext>` with a short-lived context per operation (also the better fit for a future API project). Check how scopes are created: a long-lived scope keeps tracked entities across page activations — prefer `AsNoTracking` on read-only queries.
 
@@ -387,6 +402,7 @@ Point a SQLite client (DB Browser for SQLite, DBeaver, or VS Code SQLite Viewer)
 - Entity construction uses object initialiser syntax with `= null!` navigation properties; only properties relevant to the test case need to be set
 - A `TestData` factory class in the test project provides minimal valid entity construction helpers to keep test setup concise
 - **Service tests use in-memory SQLite, not the EF InMemory provider.** Behaviour such as `NOCASE` collation, unique indexes and the `Restrict` FK is not reproduced by InMemory. Priority cases for `IngredientService`: delete blocked by recipes, delete with bottles requires acknowledgement, untrack removes bottles, rename collision differing only by case, rename too short / unchanged / not found, and the FK `Restrict` backstop.
+- Merge tests (in-memory SQLite): bottles moved not deleted; recipe ingredients repointed with amount/unit/`SortOrder` preserved; recipe conflict changes nothing; each tracked-flag combination; source = target; missing rows; rollback on save failure (trigger rejecting the delete); rename collision reports merge-possible vs blocked without persisting changes.
 - `MoveInSorted` has its own unit tests (edge positions, single item, equal keys, already in place).
 
 ---
@@ -404,5 +420,6 @@ Point a SQLite client (DB Browser for SQLite, DBeaver, or VS Code SQLite Viewer)
 - **Serving history / logbook**
 - **Instructions enrichment** — per-step timers or ingredient references
 - **Type equivalence** — recipes that accept "bourbon or rye" don't fit strict type-based availability. Options: equivalence groups, a type hierarchy (Whiskey → Bourbon), or keeping types coarse. Known limitation until decided.
-- **Merge ingredient types** (PD-009b) — repoint recipe ingredients and bottles, then delete the duplicate.
+- **Merge impact preview** (PD-009c) — counts and tracked outcome in the merge confirmation
+- **Backup before bulk-destructive operations** — SQLite file copy
 - **Database location** — move from next to the executable to `LocalApplicationData` with migration of an existing file.
